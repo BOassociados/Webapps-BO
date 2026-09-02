@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ferramentas de Engenharia | [Nome da Empresa]</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+  :root{
+    --bg: #12151a;
+    --panel: #181c22;
+    --panel-hover: #1e232b;
+    --border: #2a2f38;
+    --border-soft: #23272f;
+    --text: #e9e7e2;
+    --text-dim: #9aa1ac;
+    --text-faint: #5c636e;
+    --blue: #6f9cf3;
+    --blue-dim: #3d5a94;
+    --amber: #d98e4a;
+    --max-width: 1180px;
+  }
+
+  *{ box-sizing: border-box; margin:0; padding:0; }
+
+  html{ scroll-behavior: smooth; }
+
+  body{
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', system-ui, sans-serif;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a{ color: inherit; text-decoration: none; }
+
+  .wrap{
+    max-width: var(--max-width);
+    margin: 0 auto;
+    padding: 0 32px;
+  }
+
+  /* ---------- Header ---------- */
+
+  header{
+    border-bottom: 1px solid var(--border-soft);
+    position: sticky;
+    top: 0;
+    background: rgba(18,21,26,0.92);
+    backdrop-filter: blur(6px);
+    z-index: 20;
+  }
+
+  .header-inner{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 32px;
+  }
+
+  .brand{
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  /* LOGO PLACEHOLDER — substituir por: <img src="logo.png" alt="Nome da Empresa" class="logo-mark"> */
+  .logo-mark{
+    width: 38px;
+    height: 38px;
+    border: 1.5px dashed var(--text-faint);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--text-faint);
+    flex-shrink: 0;
+  }
+
+  .brand-name{
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    font-size: 17px;
+    letter-spacing: -0.01em;
+  }
+
+  .brand-sub{
+    font-size: 12px;
+    color: var(--text-dim);
+    display: block;
+    margin-top: 1px;
+  }
+
+  nav{
+    display: flex;
+    gap: 28px;
+    font-size: 14px;
+    color: var(--text-dim);
+  }
+
+  nav a:hover{ color: var(--text); }
+
+  /* ---------- Hero ---------- */
+
+  .hero{
+    position: relative;
+    padding: 88px 0 72px;
+    overflow: hidden;
+    border-bottom: 1px solid var(--border-soft);
+  }
+
+  .hero::before{
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+      repeating-linear-gradient(0deg, rgba(111,156,243,0.06) 0, rgba(111,156,243,0.06) 1px, transparent 1px, transparent 64px),
+      repeating-linear-gradient(90deg, rgba(111,156,243,0.06) 0, rgba(111,156,243,0.06) 1px, transparent 1px, transparent 64px);
+    mask-image: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent 85%);
+    pointer-events: none;
+  }
+
+  .hero-inner{
+    position: relative;
+    max-width: 680px;
+  }
+
+  .hero h1{
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    font-size: 40px;
+    line-height: 1.18;
+    letter-spacing: -0.015em;
+  }
+
+  .hero h1 em{
+    font-style: normal;
+    color: var(--blue);
+  }
+
+  .hero p{
+    margin-top: 18px;
+    font-size: 16px;
+    color: var(--text-dim);
+    max-width: 52ch;
+  }
+
+  .hero-meta{
+    margin-top: 32px;
+    display: flex;
+    gap: 32px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12.5px;
+    color: var(--text-faint);
+  }
+
+  .hero-meta strong{
+    color: var(--text-dim);
+    font-weight: 500;
+  }
+
+  /* ---------- Categories ---------- */
+
+  main{ padding: 64px 0 100px; }
+
+  .category{
+    margin-bottom: 64px;
+  }
+
+  .category-head{
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    padding-bottom: 14px;
+    margin-bottom: 24px;
+    border-bottom: 1px solid var(--border-soft);
+  }
+
+  .category-head h2{
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 21px;
+    font-weight: 600;
+  }
+
+  .category-head span{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--text-faint);
+  }
+
+  .card-grid{
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1px;
+    background: var(--border-soft);
+    border: 1px solid var(--border-soft);
+  }
+
+  .card{
+    background: var(--panel);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    transition: background 0.15s ease;
+    min-height: 176px;
+  }
+
+  .card:hover{ background: var(--panel-hover); }
+
+  .card h3{
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 16.5px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .card p{
+    font-size: 13.5px;
+    color: var(--text-dim);
+    flex-grow: 1;
+    margin-bottom: 16px;
+  }
+
+  .tags{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+
+  .tag{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    color: var(--blue);
+    background: rgba(111,156,243,0.09);
+    border: 1px solid rgba(111,156,243,0.18);
+    padding: 3px 7px;
+    border-radius: 3px;
+  }
+
+  .card-link{
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--text);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    width: fit-content;
+    border-bottom: 1px solid var(--blue-dim);
+    padding-bottom: 2px;
+  }
+
+  .card-link:hover{ border-bottom-color: var(--blue); color: var(--blue); }
+
+  /* Placeholder / empty-slot card, for adding future tools */
+  .card.placeholder{
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: var(--text-faint);
+    border: none;
+  }
+
+  .card.placeholder .plus{
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 22px;
+    color: var(--text-faint);
+    margin-bottom: 6px;
+  }
+
+  .card.placeholder p{
+    color: var(--text-faint);
+    font-size: 12.5px;
+    margin: 0;
+  }
+
+  /* ---------- Footer ---------- */
+
+  footer{
+    border-top: 1px solid var(--border-soft);
+    padding: 32px 0;
+  }
+
+  .footer-inner{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    font-size: 13px;
+    color: var(--text-faint);
+  }
+
+  .footer-inner a:hover{ color: var(--text-dim); }
+
+  @media (max-width: 640px){
+    .header-inner{ padding: 16px 20px; }
+    .wrap{ padding: 0 20px; }
+    nav{ display:none; }
+    .hero{ padding: 56px 0 48px; }
+    .hero h1{ font-size: 30px; }
+  }
+</style>
+</head>
+<body>
+
+  <header>
+    <div class="header-inner">
+      <div class="brand">
+        <!-- LOGO: substituir este bloco por <img src="logo.png" class="logo-mark" alt="Nome da Empresa"> -->
+        <div class="logo-mark">LOGO</div>
+        <div>
+          <div class="brand-name">[Nome da Empresa]</div>
+          <span class="brand-sub">Ferramentas de engenharia</span>
+        </div>
+      </div>
+      <nav>
+        <a href="#steel">Aço</a>
+        <a href="#concrete">Betão</a>
+        <a href="#seismic">Sísmica</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="wrap hero-inner">
+      <h1>Cálculo estrutural, <em>ao ritmo da equipa.</em></h1>
+      <p>Calculadoras internas para verificações correntes de aço, betão e ações sísmicas, conformes com os Eurocódigos. Sem instalações, sem ficheiros perdidos — abre o browser e calcula.</p>
+      <div class="hero-meta">
+        <span><strong>3</strong> ferramentas ativas</span>
+        <span><strong>EN 1992 · EN 1993 · EN 1998</strong></span>
+      </div>
+    </div>
+  </section>
+
+  <main class="wrap">
+
+    <!-- ==========================================================
+         CATEGORIA: AÇO
+         Para adicionar uma ferramenta nova, copia um <a class="card">
+         e ajusta o título, descrição, tags e o href.
+    =========================================================== -->
+    <div class="category" id="steel">
+      <div class="category-head">
+        <h2>Estruturas metálicas</h2>
+        <span>EN 1993</span>
+      </div>
+      <div class="card-grid">
+
+        <a href="ferramentas/encurvadura-pilares/index.html" class="card">
+          <div class="tags">
+            <span class="tag">EC3-1-1 §6.3</span>
+          </div>
+          <h3>Encurvadura de pilares</h3>
+          <p>Verificação da capacidade à encurvadura por flexão de elementos comprimidos.</p>
+          <span class="card-link">Abrir calculadora</span>
+        </a>
+
+        <div class="card placeholder">
+          <div class="plus">+</div>
+          <p>Adicionar ferramenta de aço</p>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ==========================================================
+         CATEGORIA: BETÃO
+    =========================================================== -->
+    <div class="category" id="concrete">
+      <div class="category-head">
+        <h2>Estruturas de betão</h2>
+        <span>EN 1992</span>
+      </div>
+      <div class="card-grid">
+
+        <a href="ferramentas/vigas-betao/index.html" class="card">
+          <div class="tags">
+            <span class="tag">ELU</span>
+            <span class="tag">Flexão</span>
+          </div>
+          <h3>Dimensionamento de vigas</h3>
+          <p>Momento resistente e esforço transverso, com desenvolvimento passo a passo.</p>
+          <span class="card-link">Abrir calculadora</span>
+        </a>
+
+        <div class="card placeholder">
+          <div class="plus">+</div>
+          <p>Adicionar ferramenta de betão</p>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ==========================================================
+         CATEGORIA: SÍSMICA
+    =========================================================== -->
+    <div class="category" id="seismic">
+      <div class="category-head">
+        <h2>Ação sísmica</h2>
+        <span>EN 1998</span>
+      </div>
+      <div class="card-grid">
+
+        <div class="card placeholder">
+          <div class="plus">+</div>
+          <p>Adicionar ferramenta sísmica</p>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+
+  <footer>
+    <div class="wrap footer-inner">
+      <span>© 2026 [Nome da Empresa] — uso interno.</span>
+      <span>Verificar sempre os resultados. Ferramentas sem garantia de exatidão.</span>
+    </div>
+  </footer>
+
+</body>
+</html>
