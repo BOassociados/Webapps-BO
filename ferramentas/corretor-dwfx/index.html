@@ -3,46 +3,196 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Utilitário DWFx Avançado</title>
+    <title>Utilitário DWFx | BO Associados</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        .container { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; max-width: 550px; width: 100%; }
-        h2 { color: #0696D7; margin-bottom: 5px; }
-        p.desc { color: #666; margin-bottom: 25px; font-size: 14px; }
-        .drop-zone { border: 2px dashed #0696D7; padding: 40px; border-radius: 10px; background: #f0f9ff; cursor: pointer; margin-bottom: 20px; transition: 0.3s; font-weight: bold; color: #0696D7; }
-        .drop-zone:hover { background: #e0f2fe; }
-        .drop-zone.dragover { background: #cce0ff; border-color: #057ebd; } /* Estilo para quando arrasta o ficheiro */
-        .options { text-align: left; background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #eee; }
-        .options label { cursor: pointer; display: block; margin-bottom: 8px; font-size: 15px; color: #333; }
-        button { background: #0696D7; color: white; border: none; padding: 14px 28px; font-size: 16px; font-weight: bold; border-radius: 5px; cursor: pointer; width: 100%; transition: 0.2s; }
-        button:hover { background: #057ebd; }
-        button:disabled { background: #ccc; cursor: not-allowed; }
-        #status { margin-top: 15px; font-weight: bold; color: #333; min-height: 20px; }
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+        :root{
+            --bg: #12151a;
+            --panel: #181c22;
+            --panel-hover: #1e232b;
+            --border: #2a2f38;
+            --border-soft: #23272f;
+            --text: #e9e7e2;
+            --text-dim: #9aa1ac;
+            --text-faint: #5c636e;
+            --blue: #6f9cf3;
+            --blue-dim: #3d5a94;
+            --green: #6fcf97;
+        }
+
+        *{ box-sizing: border-box; margin:0; padding:0; }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 24px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .back-link{
+            position: fixed;
+            top: 24px;
+            left: 24px;
+            font-size: 13.5px;
+            color: var(--text-dim);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .back-link:hover{ color: var(--text); }
+
+        .container {
+            background: var(--panel);
+            border: 1px solid var(--border-soft);
+            padding: 40px;
+            border-radius: 8px;
+            text-align: center;
+            max-width: 550px;
+            width: 100%;
+        }
+
+        .eyebrow{
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 11px;
+            color: var(--blue);
+            letter-spacing: 0.02em;
+            margin-bottom: 10px;
+        }
+
+        h2 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 600;
+            font-size: 22px;
+            color: var(--text);
+            margin-bottom: 6px;
+        }
+
+        p.desc {
+            color: var(--text-dim);
+            margin-bottom: 28px;
+            font-size: 14px;
+        }
+
+        .drop-zone {
+            border: 1.5px dashed var(--border);
+            padding: 40px;
+            border-radius: 6px;
+            background: var(--bg);
+            cursor: pointer;
+            margin-bottom: 20px;
+            transition: 0.2s;
+            font-weight: 500;
+            color: var(--text-dim);
+            font-size: 14.5px;
+        }
+
+        .drop-zone:hover {
+            background: var(--panel-hover);
+            border-color: var(--blue-dim);
+            color: var(--text);
+        }
+
+        .drop-zone.dragover {
+            background: rgba(111,156,243,0.08);
+            border-color: var(--blue);
+            color: var(--text);
+        }
+
+        .options {
+            text-align: left;
+            background: var(--bg);
+            padding: 16px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-soft);
+        }
+
+        .options label {
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            font-size: 14px;
+            color: var(--text-dim);
+        }
+
+        .options label:last-child{ margin-bottom: 0; }
+
+        .options input[type="checkbox"]{
+            accent-color: var(--blue);
+            width: 15px;
+            height: 15px;
+            flex-shrink: 0;
+        }
+
+        button {
+            background: var(--blue);
+            color: #0e1116;
+            border: none;
+            padding: 14px 28px;
+            font-size: 14.5px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+            transition: 0.15s;
+        }
+
+        button:hover { background: #85aaf5; }
+
+        button:disabled {
+            background: var(--border);
+            color: var(--text-faint);
+            cursor: not-allowed;
+        }
+
+        #status {
+            margin-top: 16px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 12.5px;
+            color: var(--text-dim);
+            min-height: 18px;
+        }
     </style>
 </head>
 <body>
 
+<a href="../../index.html" class="back-link">← Voltar às ferramentas</a>
+
 <div class="container">
+    <div class="eyebrow">Geral · Autodesk</div>
     <h2>Utilitário DWFx</h2>
     <p class="desc">Correção de unidades (Metros) e Renomeação Automática</p>
-    
+
     <input type="file" id="fileInput" accept=".dwfx" style="display: none;">
     <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click();">
         📂 Clique ou arraste o ficheiro .dwfx para aqui
     </div>
-    
+
     <div class="options">
         <label>
-            <input type="checkbox" id="checkUnits" checked disabled> 
+            <input type="checkbox" id="checkUnits" checked disabled>
             Forçar unidades para Metros e 0.00 (Obrigatório)
         </label>
         <label>
-            <input type="checkbox" id="checkRename" checked> 
+            <input type="checkbox" id="checkRename" checked>
             Renomear folhas (Índice -> Desenho 01, 02... -> Lista de Layers)
         </label>
     </div>
-    
+
     <button id="processBtn" disabled>Processar Ficheiro</button>
     <div id="status"></div>
 </div>
@@ -105,7 +255,7 @@
 
     processBtn.addEventListener('click', async () => {
         if (!selectedFile) return;
-        
+
         statusDiv.innerText = "A processar, por favor aguarde...";
         processBtn.disabled = true;
 
@@ -123,25 +273,25 @@
             for (let path of files) {
                 if (path.toLowerCase().endsWith('descriptor.xml') && path.toLowerCase().includes('eplot_')) {
                     let xmlText = await contents.files[path].async('string');
-                    
+
                     if (!xmlText.includes('markup private')) {
                         const fileUuid = crypto.randomUUID().toUpperCase();
                         const markupFilename = `${fileUuid}.xml`;
                         const objId = generateId();
-                        
+
                         const hrefMatch = xmlText.match(/href="([^"]+)"/);
                         if (hrefMatch) {
                             const basePath = hrefMatch[1].substring(0, hrefMatch[1].lastIndexOf('/'));
                             const newHref = `${basePath}/${markupFilename}`;
-                            
+
                             const novaTag = `\n<ePlot:Resource role="markup private" mime="text/xml" href="${newHref}" title="Markup_private" size="${markupContent.length}" internalId="dwfresource_999" objectId="${objId}"/>\n`;
                             xmlText = xmlText.replace('</ePlot:Resources>', novaTag + '</ePlot:Resources>');
-                            
+
                             zip.file(path, xmlText);
-                            
+
                             const pastaPai = path.substring(0, path.lastIndexOf('/'));
                             zip.file(`${pastaPai}/${markupFilename}`, markupContent);
-                            
+
                             modificacoesUnidades++;
                         }
                     }
@@ -154,12 +304,12 @@
             if (checkRename.checked) {
                 const manifestPath = files.find(f => f.toLowerCase().endsWith('manifest.xml'));
                 const contentPaths = files.filter(f => f.toLowerCase().endsWith('.content.xml'));
-                
+
                 if (manifestPath) {
                     let manifestText = await contents.files[manifestPath].async('string');
                     const parser = new DOMParser();
                     const xmlDoc = parser.parseFromString(manifestText, "text/xml");
-                    
+
                     const todasSeccoes = Array.from(xmlDoc.getElementsByTagName('*')).filter(node => node.nodeName.indexOf('Section') !== -1);
                     const paginas = todasSeccoes.filter(sec => {
                         const type = sec.getAttribute('type');
@@ -192,7 +342,7 @@
                             let safeAntigo = escapeRegExp(nomeAntigo);
                             let regexName = new RegExp(`name="${safeAntigo}"`, "g");
                             let regexTitle = new RegExp(`title="${safeAntigo}"`, "g");
-                            
+
                             for (let cp of contentPaths) {
                                 contentTexts[cp] = contentTexts[cp].replace(regexName, `name="${novoNome}"`).replace(regexTitle, `title="${novoNome}"`);
                             }
@@ -224,7 +374,7 @@
                                         el.setAttribute('name', novoNome);
                                         mudouNome = true;
                                     }
-                                    
+
                                     // Forçar a mudança nas propriedades internas
                                     if (el.nodeName.indexOf('Property') !== -1) {
                                         let pName = el.getAttribute('name');
@@ -247,7 +397,7 @@
                     // 2.4 Gravar ficheiros atualizados no ZIP
                     const serializer = new XMLSerializer();
                     zip.file(manifestPath, serializer.serializeToString(xmlDoc));
-                    
+
                     for (let cp of contentPaths) {
                         zip.file(cp, contentTexts[cp]);
                     }
@@ -258,7 +408,7 @@
             // PASSO 3: GERAR O NOVO FICHEIRO DWFx E GUARDAR
             // ==========================================
             statusDiv.innerText = `Sucesso! Metros: ${modificacoesUnidades} pág | Renomeadas: ${folhasRenomeadas} pág. A guardar...`;
-            
+
             const blob = await zip.generateAsync({type:"blob", compression: "DEFLATE"});
             let newFilename = selectedFile.name.replace('.dwfx', '_final.dwfx');
 
@@ -288,7 +438,7 @@
                 // Fallback para navegadores que não suportam a File System API
                 fallbackDownload(blob, newFilename);
             }
-            
+
         } catch (error) {
             console.error(error);
             statusDiv.innerText = "Erro ao processar o ficheiro. Ficheiro inválido ou corrompido.";
