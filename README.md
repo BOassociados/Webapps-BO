@@ -1,1 +1,1 @@
-# bo-web
+# webapps-bo
