@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Utilitário DWFx Avançado</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .container { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; max-width: 550px; width: 100%; }
+        h2 { color: #0696D7; margin-bottom: 5px; }
+        p.desc { color: #666; margin-bottom: 25px; font-size: 14px; }
+        .drop-zone { border: 2px dashed #0696D7; padding: 40px; border-radius: 10px; background: #f0f9ff; cursor: pointer; margin-bottom: 20px; transition: 0.3s; font-weight: bold; color: #0696D7; }
+        .drop-zone:hover { background: #e0f2fe; }
+        .drop-zone.dragover { background: #cce0ff; border-color: #057ebd; } /* Estilo para quando arrasta o ficheiro */
+        .options { text-align: left; background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #eee; }
+        .options label { cursor: pointer; display: block; margin-bottom: 8px; font-size: 15px; color: #333; }
+        button { background: #0696D7; color: white; border: none; padding: 14px 28px; font-size: 16px; font-weight: bold; border-radius: 5px; cursor: pointer; width: 100%; transition: 0.2s; }
+        button:hover { background: #057ebd; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        #status { margin-top: 15px; font-weight: bold; color: #333; min-height: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Utilitário DWFx</h2>
+    <p class="desc">Correção de unidades (Metros) e Renomeação Automática</p>
+    
+    <input type="file" id="fileInput" accept=".dwfx" style="display: none;">
+    <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click();">
+        📂 Clique ou arraste o ficheiro .dwfx para aqui
+    </div>
+    
+    <div class="options">
+        <label>
+            <input type="checkbox" id="checkUnits" checked disabled> 
+            Forçar unidades para Metros e 0.00 (Obrigatório)
+        </label>
+        <label>
+            <input type="checkbox" id="checkRename" checked> 
+            Renomear folhas (Índice -> Desenho 01, 02... -> Lista de Layers)
+        </label>
+    </div>
+    
+    <button id="processBtn" disabled>Processar Ficheiro</button>
+    <div id="status"></div>
+</div>
+
+<script>
+    const fileInput = document.getElementById('fileInput');
+    const processBtn = document.getElementById('processBtn');
+    const statusDiv = document.getElementById('status');
+    const checkRename = document.getElementById('checkRename');
+    const dropZone = document.getElementById('dropZone');
+    let selectedFile = null;
+
+    const markupContent = `<?xml version="1.0" encoding="utf-8"?>
+<MarkupPrivate Version="14.0.0.177" CompatibleVersion="1.0.0.0" Units="8" DimFormat="8" angleUnits="14" measurePrecisionDecimal="3" measurePrecisionFractional="0"/>`;
+
+    function generateId() {
+        return crypto.randomUUID().replace(/-/g, '').substring(0, 22);
+    }
+
+    function escapeRegExp(string) {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    // Função para processar o ficheiro selecionado ou arrastado
+    function handleFile(file) {
+        if (file && file.name.toLowerCase().endsWith('.dwfx')) {
+            selectedFile = file;
+            statusDiv.innerText = `Ficheiro: ${selectedFile.name}`;
+            processBtn.disabled = false;
+        } else {
+            statusDiv.innerText = "Por favor, selecione ou arraste um ficheiro .dwfx válido.";
+            processBtn.disabled = true;
+            selectedFile = null;
+        }
+    }
+
+    // Evento de clique na zona
+    fileInput.addEventListener('change', (e) => {
+        handleFile(e.target.files[0]);
+    });
+
+    // Eventos Drag & Drop
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            handleFile(e.dataTransfer.files[0]);
+        }
+    });
+
+    processBtn.addEventListener('click', async () => {
+        if (!selectedFile) return;
+        
+        statusDiv.innerText = "A processar, por favor aguarde...";
+        processBtn.disabled = true;
+
+        try {
+            const zip = new JSZip();
+            const contents = await zip.loadAsync(selectedFile);
+            let modificacoesUnidades = 0;
+            let folhasRenomeadas = 0;
+
+            const files = Object.keys(contents.files);
+
+            // ==========================================
+            // PASSO 1: FORÇAR UNIDADES (METROS)
+            // ==========================================
+            for (let path of files) {
+                if (path.toLowerCase().endsWith('descriptor.xml') && path.toLowerCase().includes('eplot_')) {
+                    let xmlText = await contents.files[path].async('string');
+                    
+                    if (!xmlText.includes('markup private')) {
+                        const fileUuid = crypto.randomUUID().toUpperCase();
+                        const markupFilename = `${fileUuid}.xml`;
+                        const objId = generateId();
+                        
+                        const hrefMatch = xmlText.match(/href="([^"]+)"/);
+                        if (hrefMatch) {
+                            const basePath = hrefMatch[1].substring(0, hrefMatch[1].lastIndexOf('/'));
+                            const newHref = `${basePath}/${markupFilename}`;
+                            
+                            const novaTag = `\n<ePlot:Resource role="markup private" mime="text/xml" href="${newHref}" title="Markup_private" size="${markupContent.length}" internalId="dwfresource_999" objectId="${objId}"/>\n`;
+                            xmlText = xmlText.replace('</ePlot:Resources>', novaTag + '</ePlot:Resources>');
+                            
+                            zip.file(path, xmlText);
+                            
+                            const pastaPai = path.substring(0, path.lastIndexOf('/'));
+                            zip.file(`${pastaPai}/${markupFilename}`, markupContent);
+                            
+                            modificacoesUnidades++;
+                        }
+                    }
+                }
+            }
+
+            // ==========================================
+            // PASSO 2: RENOMEAR FOLHAS (SE ATIVADO)
+            // ==========================================
+            if (checkRename.checked) {
+                const manifestPath = files.find(f => f.toLowerCase().endsWith('manifest.xml'));
+                const contentPaths = files.filter(f => f.toLowerCase().endsWith('.content.xml'));
+                
+                if (manifestPath) {
+                    let manifestText = await contents.files[manifestPath].async('string');
+                    const parser = new DOMParser();
+                    const xmlDoc = parser.parseFromString(manifestText, "text/xml");
+                    
+                    const todasSeccoes = Array.from(xmlDoc.getElementsByTagName('*')).filter(node => node.nodeName.indexOf('Section') !== -1);
+                    const paginas = todasSeccoes.filter(sec => {
+                        const type = sec.getAttribute('type');
+                        return type && type.indexOf('com.autodesk.dwf.ePlot') !== -1 && type.indexOf('Global') === -1;
+                    });
+
+                    let contentTexts = {};
+                    for (let cp of contentPaths) {
+                        contentTexts[cp] = await contents.files[cp].async('string');
+                    }
+
+                    for (let i = 0; i < paginas.length; i++) {
+                        let novoNome = "";
+                        if (i === 0) {
+                            novoNome = "Índice";
+                        } else if (i === paginas.length - 1) {
+                            novoNome = "Lista de Layers";
+                        } else {
+                            const numStr = String(i).padStart(2, '0');
+                            novoNome = `Desenho ${numStr}`;
+                        }
+
+                        let nomeAntigo = paginas[i].getAttribute('title');
+
+                        // 2.1 Mudar o nome no manifest.xml
+                        paginas[i].setAttribute('title', novoNome);
+
+                        // 2.2 Substituir no content.xml (Interface visual)
+                        if (nomeAntigo) {
+                            let safeAntigo = escapeRegExp(nomeAntigo);
+                            let regexName = new RegExp(`name="${safeAntigo}"`, "g");
+                            let regexTitle = new RegExp(`title="${safeAntigo}"`, "g");
+                            
+                            for (let cp of contentPaths) {
+                                contentTexts[cp] = contentTexts[cp].replace(regexName, `name="${novoNome}"`).replace(regexTitle, `title="${novoNome}"`);
+                            }
+                        }
+
+                        // 2.3 Mudar o nome no descriptor.xml
+                        let descriptorHref = null;
+                        const recursos = paginas[i].getElementsByTagName('*');
+                        for (let res of recursos) {
+                            if (res.nodeName.indexOf('Resource') !== -1 && res.getAttribute('role') === 'descriptor') {
+                                descriptorHref = res.getAttribute('href');
+                                break;
+                            }
+                        }
+
+                        if (descriptorHref) {
+                            let cleanHref = descriptorHref.startsWith('/') ? descriptorHref.substring(1).toLowerCase() : descriptorHref.toLowerCase();
+                            let actualZipPath = files.find(f => f.toLowerCase() === cleanHref || f.toLowerCase().endsWith(cleanHref));
+
+                            if (actualZipPath && contents.files[actualZipPath]) {
+                                let descText = await contents.files[actualZipPath].async('string');
+                                let descDoc = parser.parseFromString(descText, "text/xml");
+                                let elementos = descDoc.getElementsByTagName('*');
+                                let mudouNome = false;
+
+                                for (let el of elementos) {
+                                    // NOVIDADE: Forçar a mudança na primeira linha (<ePlot:Page name="Model">)
+                                    if (el.nodeName.indexOf('Page') !== -1 && el.hasAttribute('name')) {
+                                        el.setAttribute('name', novoNome);
+                                        mudouNome = true;
+                                    }
+                                    
+                                    // Forçar a mudança nas propriedades internas
+                                    if (el.nodeName.indexOf('Property') !== -1) {
+                                        let pName = el.getAttribute('name');
+                                        if (pName === 'Title' || pName === 'Layout Name') {
+                                            el.setAttribute('value', novoNome);
+                                            mudouNome = true;
+                                        }
+                                    }
+                                }
+
+                                if (mudouNome) {
+                                    const serializer = new XMLSerializer();
+                                    zip.file(actualZipPath, serializer.serializeToString(descDoc));
+                                    folhasRenomeadas++;
+                                }
+                            }
+                        }
+                    }
+
+                    // 2.4 Gravar ficheiros atualizados no ZIP
+                    const serializer = new XMLSerializer();
+                    zip.file(manifestPath, serializer.serializeToString(xmlDoc));
+                    
+                    for (let cp of contentPaths) {
+                        zip.file(cp, contentTexts[cp]);
+                    }
+                }
+            }
+
+            // ==========================================
+            // PASSO 3: GERAR O NOVO FICHEIRO DWFx E GUARDAR
+            // ==========================================
+            statusDiv.innerText = `Sucesso! Metros: ${modificacoesUnidades} pág | Renomeadas: ${folhasRenomeadas} pág. A guardar...`;
+            
+            const blob = await zip.generateAsync({type:"blob", compression: "DEFLATE"});
+            let newFilename = selectedFile.name.replace('.dwfx', '_final.dwfx');
+
+            // Tentar usar a API nativa do File System (Permite escolher a pasta mais facilmente)
+            if (window.showSaveFilePicker) {
+                try {
+                    const handle = await window.showSaveFilePicker({
+                        suggestedName: newFilename,
+                        types: [{
+                            description: 'Ficheiro DWFx',
+                            accept: {'application/x-dwf': ['.dwfx']},
+                        }],
+                    });
+                    const writable = await handle.createWritable();
+                    await writable.write(blob);
+                    await writable.close();
+                    statusDiv.innerText = `Sucesso! Ficheiro guardado.`;
+                } catch (err) {
+                    // Se o utilizador cancelar a gravação, paramos. Se for um erro diferente, tentamos o método clássico.
+                    if (err.name === 'AbortError') {
+                        statusDiv.innerText = "Gravação cancelada pelo utilizador.";
+                    } else {
+                        fallbackDownload(blob, newFilename);
+                    }
+                }
+            } else {
+                // Fallback para navegadores que não suportam a File System API
+                fallbackDownload(blob, newFilename);
+            }
+            
+        } catch (error) {
+            console.error(error);
+            statusDiv.innerText = "Erro ao processar o ficheiro. Ficheiro inválido ou corrompido.";
+        }
+        processBtn.disabled = false;
+    });
+
+    // Função clássica de download caso o 'showSaveFilePicker' falhe ou não seja suportado
+    function fallbackDownload(blob, filename) {
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        link.click();
+        URL.revokeObjectURL(link.href);
+        statusDiv.innerText = `Sucesso! Download iniciado.`;
+    }
+</script>
+
+</body>
+</html>
