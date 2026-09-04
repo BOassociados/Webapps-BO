@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Termo de Responsabilidade | BO Associados</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/docxtemplater/3.44.0/js/docxtemplater.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pizzip/3.1.4/pizzip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pizzip/3.1.4/pizzip-utils.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+  :root{
+    --bg: #12151a;
+    --panel: #181c22;
+    --panel-hover: #1e232b;
+    --border: #2a2f38;
+    --border-soft: #23272f;
+    --text: #e9e7e2;
+    --text-dim: #9aa1ac;
+    --text-faint: #5c636e;
+    --blue: #7EA4A2;
+    --blue-dim: #4d6564;
+    --amber: #d98e4a;
+    --red: #d97a7a;
+  }
+
+  *{ box-sizing: border-box; margin:0; padding:0; }
+
+  body{
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    padding: 40px 20px 100px;
+  }
+
+  a{ color: inherit; }
+
+  .back-link{
+    position: fixed;
+    top: 24px;
+    left: 24px;
+    font-size: 13.5px;
+    color: var(--text-dim);
+    text-decoration: none;
+    z-index: 10;
+  }
+  .back-link:hover{ color: var(--text); }
+
+  .wrap{
+    max-width: 760px;
+    margin: 0 auto;
+  }
+
+  header.page-head{
+    text-align: center;
+    margin-bottom: 36px;
+    padding-top: 20px;
+  }
+
+  .eyebrow{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--blue);
+    margin-bottom: 8px;
+  }
+
+  h1{
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    font-size: 26px;
+  }
+
+  .subtitle{
+    color: var(--text-dim);
+    font-size: 14px;
+    margin-top: 8px;
+  }
+
+  .card{
+    background: var(--panel);
+    border: 1px solid var(--border-soft);
+    border-radius: 8px;
+    padding: 26px;
+    margin-bottom: 24px;
+  }
+
+  .card h2{
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--blue);
+    margin-bottom: 18px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-soft);
+  }
+
+  .field{
+    margin-bottom: 16px;
+  }
+  .field:last-child{ margin-bottom: 0; }
+
+  .field label{
+    display: block;
+    font-size: 12.5px;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+
+  .row{
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .row3{
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 14px;
+  }
+
+  input[type="text"], input[type="date"], select, textarea{
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 12px;
+    border-radius: 5px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+  }
+  input:focus, select:focus, textarea:focus{
+    outline: none;
+    border-color: var(--blue-dim);
+  }
+
+  select{ cursor: pointer; }
+
+  .radio-group{
+    display: flex;
+    gap: 20px;
+    padding-top: 4px;
+  }
+  .radio-group label{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: var(--text);
+    cursor: pointer;
+    margin-bottom: 0;
+  }
+  .radio-group input{ accent-color: var(--blue); width: 15px; height: 15px; }
+
+  .json-loader{
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--bg);
+    border: 1px dashed var(--border);
+    border-radius: 6px;
+    padding: 14px;
+    margin-bottom: 18px;
+  }
+
+  .json-loader input[type="file"]{ font-size: 12.5px; color: var(--text-dim); flex-grow: 1; }
+
+  #jsonStatus{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11.5px;
+    color: var(--text-faint);
+  }
+  #jsonStatus.ok{ color: var(--blue); }
+  #jsonStatus.err{ color: var(--red); }
+
+  .actions{
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
+  }
+
+  button{
+    flex: 1;
+    background: var(--blue);
+    color: #0e1116;
+    border: none;
+    padding: 14px 20px;
+    font-size: 14.5px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: 0.15s;
+  }
+  button:hover{ background: #97b7b5; }
+  button:disabled{ background: var(--border); color: var(--text-faint); cursor: not-allowed; }
+  button.secondary{ background: var(--panel-hover); color: var(--text); border: 1px solid var(--border); }
+  button.secondary:hover{ background: var(--border-soft); }
+
+  #status{
+    margin-top: 14px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12.5px;
+    color: var(--text-dim);
+    text-align: center;
+    min-height: 18px;
+  }
+
+  .hint{
+    font-size: 11.5px;
+    color: var(--text-faint);
+    margin-top: 4px;
+  }
+
+  /* Hidden print-only preview used to generate the PDF */
+  #pdfPreview{
+    position: fixed;
+    left: -9999px;
+    top: 0;
+    width: 210mm;
+    background: white;
+    color: #111;
+    padding: 25mm 20mm;
+    font-family: 'Arial', sans-serif;
+    font-size: 11pt;
+    line-height: 1.5;
+  }
+  #pdfPreview .logo{ height: 46px; margin-bottom: 30px; }
+  #pdfPreview h3{ text-align: center; font-size: 12pt; margin-bottom: 4px; }
+  #pdfPreview p{ margin-bottom: 14px; text-align: justify; }
+  #pdfPreview .sig{ margin-top: 40px; }
+
+  @media (max-width: 640px){
+    .row, .row3{ grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<a href="../../index.html" class="back-link">← Voltar às ferramentas</a>
+
+<div class="wrap">
+
+  <header class="page-head">
+    <div class="eyebrow">Geral · Documentos</div>
+    <h1>Termo de Responsabilidade</h1>
+    <p class="subtitle">Preenche os campos e gera o documento em Word ou PDF.</p>
+  </header>
+
+  <!-- ============ DADOS DO AUTOR ============ -->
+  <div class="card">
+    <h2>Dados do Autor do Projeto</h2>
+
+    <div class="json-loader">
+      <input type="file" id="jsonFile" accept=".json">
+      <span id="jsonStatus">Sem ficheiro de autores carregado</span>
+    </div>
+
+    <div class="field">
+      <label>Autor</label>
+      <select id="autorSelect">
+        <option value="">— escolher / preencher manualmente —</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Nome completo</label>
+      <input type="text" id="autor_nome" placeholder="Nome completo do técnico">
+    </div>
+
+    <div class="field">
+      <label>Morada profissional</label>
+      <input type="text" id="autor_morada" placeholder="Morada profissional completa">
+    </div>
+
+    <div class="row3">
+      <div class="field">
+        <label>N.º Cartão de Cidadão</label>
+        <input type="text" id="autor_cc1" placeholder="10581875">
+      </div>
+      <div class="field">
+        <label>Dígito</label>
+        <input type="text" id="autor_cc2" placeholder="5">
+      </div>
+      <div class="field">
+        <label>Versão</label>
+        <input type="text" id="autor_cc3" placeholder="ZV0">
+      </div>
+    </div>
+
+    <div class="row3">
+      <div class="field">
+        <label>CC válido até — dia</label>
+        <input type="text" id="autor_cc_dia" placeholder="27">
+      </div>
+      <div class="field">
+        <label>Mês</label>
+        <select id="autor_cc_mes"></select>
+      </div>
+      <div class="field">
+        <label>Ano</label>
+        <input type="text" id="autor_cc_ano" placeholder="2030">
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label>NIF</label>
+        <input type="text" id="autor_nif" placeholder="199713600">
+      </div>
+      <div class="field">
+        <label>N.º Ordem dos Engenheiros</label>
+        <input type="text" id="autor_noe" placeholder="41034">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Código de verificação de competências profissionais</label>
+      <input type="text" id="codigo_verificacao" placeholder="Gerado no site da Ordem, para este documento">
+      <div class="hint">Este código é único por documento — copia-o do portal da Ordem dos Engenheiros.</div>
+    </div>
+  </div>
+
+  <!-- ============ ESPECIALIDADE ============ -->
+  <div class="card">
+    <h2>Especialidade do Projeto</h2>
+
+    <div class="field">
+      <label>Especialidade</label>
+      <select id="especialidadeSelect"></select>
+    </div>
+
+    <div class="field" id="subespCampo" style="display:none;">
+      <label>Sub-especialidade</label>
+      <select id="subespecialidadeSelect"></select>
+    </div>
+  </div>
+
+  <!-- ============ DADOS DA OBRA ============ -->
+  <div class="card">
+    <h2>Dados da Obra</h2>
+
+    <div class="row">
+      <div class="field">
+        <label>Operação urbanística</label>
+        <select id="operacao_urbanistica"></select>
+      </div>
+      <div class="field">
+        <label>Tipo de obra</label>
+        <input type="text" id="tipo_obra" list="tipoObraList" placeholder="uma área comercial">
+        <datalist id="tipoObraList">
+          <option value="uma área comercial">
+          <option value="uma moradia">
+        </datalist>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Morada / localização da obra</label>
+      <input type="text" id="obra_morada" placeholder="Lugar da Ribeira, Estrada Nacional n.º 101...">
+    </div>
+
+    <div class="field">
+      <label>Procedimento</label>
+      <select id="procedimento">
+        <option value="licenciamento">licenciamento</option>
+        <option value="comunicação prévia">comunicação prévia</option>
+        <option value="execução">execução</option>
+        <option value="concurso">concurso</option>
+      </select>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label>N.º de Projeto (para o nome do ficheiro)</label>
+        <input type="text" id="nproj" placeholder="1850">
+      </div>
+      <div class="field">
+        <label>Revisão (para o nome do ficheiro)</label>
+        <select id="revisao"></select>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ REQUERENTE ============ -->
+  <div class="card">
+    <h2>Dados do Requerente</h2>
+
+    <div class="field">
+      <label>Tipo</label>
+      <div class="radio-group">
+        <label><input type="radio" name="requerenteTipo" value="empresa" checked> Empresa</label>
+        <label><input type="radio" name="requerenteTipo" value="individual"> Particular</label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Nome / Firma</label>
+      <input type="text" id="requerente_nome" placeholder="Pingo Doce Distribuição Alimentar S.A.">
+    </div>
+
+    <div class="field">
+      <label id="requerenteMoradaLabel">Sede</label>
+      <input type="text" id="requerente_morada" placeholder="rua Actor António Silva, n.º 7, Lumiar, Lisboa">
+    </div>
+  </div>
+
+  <!-- ============ DATA ============ -->
+  <div class="card">
+    <h2>Data do Documento</h2>
+    <div class="row3">
+      <div class="field">
+        <label>Dia</label>
+        <select id="data_dia"></select>
+      </div>
+      <div class="field">
+        <label>Mês</label>
+        <select id="data_mes"></select>
+      </div>
+      <div class="field">
+        <label>Ano</label>
+        <select id="data_ano"></select>
+      </div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="secondary" id="btnPdf">Gerar PDF</button>
+    <button id="btnDocx">Gerar Word</button>
+  </div>
+  <div id="status"></div>
+
+</div>
+
+<!-- Hidden preview used only to render the PDF -->
+<div id="pdfPreview">
+  <img src="logo_color.png" class="logo" onerror="this.style.display='none'">
+  <h3 id="pv_title1">TERMO DE RESPONSABILIDADE DO TÉCNICO AUTOR DO</h3>
+  <h3 id="pv_title2" style="margin-bottom:30px;">PROJETO DE <span id="pv_especialidade"></span></h3>
+  <p id="pv_body"></p>
+  <p id="pv_codigo"></p>
+  <p id="pv_data" style="margin-top:30px; text-align:center;"></p>
+  <p class="sig" style="text-align:center;">
+    <span id="pv_autor_nome"></span><br>
+    (documento assinado digitalmente)
+  </p>
+</div>
+
+<script>
+// ---------------------------------------------------------
+// DADOS FIXOS
+// ---------------------------------------------------------
+
+const MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+
+const ESPECIALIDADES = {
+  "Estruturas":                { fixedSub: "Estabilidade" },
+  "Instalações Hidráulicas":   { subs: ["Abastecimento de Água","Drenagem de Águas Residuais","Drenagem de Águas Pluviais","Redes de Incêndio","Redes Enterradas"] },
+  "Instalações de Gás":        { fixedSub: "Redes de Gás" },
+  "Arruamentos":                { subs: ["Apresentação","Movimento de Terras","Infra-estruturas","Pavimentação","Obras Acessórias","Sinalização e Segurança"] },
+  "Movimento de Terras":       { fixedSub: "Movimento de Terras" },
+  "Arranjos Exteriores":       { fixedSub: "Arranjos Exteriores" },
+  "Geotecnia":                  { fixedSub: "Geotecnia" },
+  "Térmica":                    { fixedSub: "Térmica" },
+  "Acústica":                   { fixedSub: "Acústica" },
+  "Segurança contra Incêndios":{ fixedSub: "Segurança contra Incêndios" },
+  "Impacte Ambiental":         { fixedSub: "Impacte Ambiental" },
+  "Certificação Energética":   { fixedSub: "Certificação Energética" },
+  "Plano de Segurança e Saúde":{ fixedSub: "Plano de Segurança e Saúde" },
+  "Plano de Prevenção e Gestão de Resíduos de Construção e Demolição": { fixedSub: "Plano de Prevenção e Gestão de Resíduos de Construção e Demolição" },
+  "Plano de Resíduos Sólidos": { fixedSub: "Plano de Resíduos Sólidos" },
+  "Instalações Eletromecânicas":{ fixedSub: "Transporte de pessoas" }
+};
+
+const OPERACOES = ["construção","ampliação","reconstrução","alteração","conservação","demolição","urbanização","loteamento","remodelação de terrenos"];
+
+const PROCEDIMENTO_MAP = {
+  "comunicação prévia": { verbo: "apresentada", cujoa: "cuja" },
+  "execução":            { verbo: "apresentada", cujoa: "cuja" },
+  "licenciamento":       { verbo: "requerido",   cujoa: "cujo" },
+  "concurso":            { verbo: "requerido",   cujoa: "cujo" }
+};
+
+const FASE_MAP = { "execução":"E", "licenciamento":"L", "comunicação prévia":"CP", "concurso":"C" };
+
+let autoresData = [];
+
+// ---------------------------------------------------------
+// INICIALIZAÇÃO DOS CAMPOS
+// ---------------------------------------------------------
+
+function fillSelect(el, items, placeholder){
+  el.innerHTML = '';
+  if (placeholder){
+    const opt = document.createElement('option');
+    opt.value = ''; opt.textContent = placeholder;
+    el.appendChild(opt);
+  }
+  items.forEach(v => {
+    const opt = document.createElement('option');
+    opt.value = v; opt.textContent = v;
+    el.appendChild(opt);
+  });
+}
+
+// Meses
+fillSelect(document.getElementById('autor_cc_mes'), MESES, '—');
+fillSelect(document.getElementById('data_mes'), MESES);
+
+// Dias 1-31
+const dias = Array.from({length:31}, (_,i)=>String(i+1));
+fillSelect(document.getElementById('data_dia'), dias);
+
+// Anos (ano atual -10 a +10)
+const anoAtual = new Date().getFullYear();
+const anos = Array.from({length:21}, (_,i)=>String(anoAtual-10+i));
+fillSelect(document.getElementById('data_ano'), anos);
+
+// Data por defeito = hoje
+const hoje = new Date();
+document.getElementById('data_dia').value = String(hoje.getDate());
+document.getElementById('data_mes').value = MESES[hoje.getMonth()];
+document.getElementById('data_ano').value = String(hoje.getFullYear());
+
+// Revisões R00-R99
+const revs = Array.from({length:100}, (_,i)=> 'R' + String(i).padStart(2,'0'));
+fillSelect(document.getElementById('revisao'), revs);
+
+// Operação urbanística
+fillSelect(document.getElementById('operacao_urbanistica'), OPERACOES);
+
+// Especialidades
+fillSelect(document.getElementById('especialidadeSelect'), Object.keys(ESPECIALIDADES), '— escolher —');
+
+document.getElementById('especialidadeSelect').addEventListener('change', function(){
+  const esp = ESPECIALIDADES[this.value];
+  const campo = document.getElementById('subespCampo');
+  const sel = document.getElementById('subespecialidadeSelect');
+  if (!esp){ campo.style.display = 'none'; return; }
+  if (esp.subs){
+    fillSelect(sel, esp.subs, '— escolher —');
+    campo.style.display = 'block';
+  } else {
+    campo.style.display = 'none';
+  }
+});
+
+// Requerente tipo -> label da morada
+document.querySelectorAll('input[name="requerenteTipo"]').forEach(r => {
+  r.addEventListener('change', function(){
+    document.getElementById('requerenteMoradaLabel').textContent =
+      this.value === 'empresa' ? 'Sede' : 'Morada';
+  });
+});
+
+// ---------------------------------------------------------
+// CARREGAR FICHEIRO JSON DE AUTORES (local, nunca sai do browser)
+// ---------------------------------------------------------
+
+document.getElementById('jsonFile').addEventListener('change', function(e){
+  const file = e.target.files[0];
+  const statusEl = document.getElementById('jsonStatus');
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev){
+    try {
+      const data = JSON.parse(ev.target.result);
+      autoresData = data.autores || [];
+      const sel = document.getElementById('autorSelect');
+      sel.innerHTML = '<option value="">— escolher / preencher manualmente —</option>';
+      autoresData.forEach((a, i) => {
+        const opt = document.createElement('option');
+        opt.value = i; opt.textContent = a.nome;
+        sel.appendChild(opt);
+      });
+      statusEl.textContent = `${autoresData.length} autor(es) carregado(s)`;
+      statusEl.className = 'ok';
+    } catch(err){
+      statusEl.textContent = 'Ficheiro JSON inválido';
+      statusEl.className = 'err';
+    }
+  };
+  reader.readAsText(file);
+});
+
+document.getElementById('autorSelect').addEventListener('change', function(){
+  const idx = this.value;
+  if (idx === '') return;
+  const a = autoresData[idx];
+  document.getElementById('autor_nome').value = a.nome || '';
+  document.getElementById('autor_morada').value = a.morada || '';
+  document.getElementById('autor_cc1').value = a.cc1 || '';
+  document.getElementById('autor_cc2').value = a.cc2 || '';
+  document.getElementById('autor_cc3').value = a.cc3 || '';
+  document.getElementById('autor_cc_dia').value = a.cc_dia || '';
+  document.getElementById('autor_cc_mes').value = a.cc_mes || '';
+  document.getElementById('autor_cc_ano').value = a.cc_ano || '';
+  document.getElementById('autor_nif').value = a.nif || '';
+  document.getElementById('autor_noe').value = a.noe || '';
+});
+
+// ---------------------------------------------------------
+// RECOLHER DADOS DO FORMULÁRIO
+// ---------------------------------------------------------
+
+function getFormData(){
+  const espSelect = document.getElementById('especialidadeSelect').value;
+  const espInfo = ESPECIALIDADES[espSelect] || {};
+  const especialidadeFinal = espInfo.fixedSub || document.getElementById('subespecialidadeSelect').value || '';
+
+  const procedimento = document.getElementById('procedimento').value;
+  const pMap = PROCEDIMENTO_MAP[procedimento] || {verbo:'', cujoa:''};
+
+  const tipoReq = document.querySelector('input[name="requerenteTipo"]:checked').value;
+  const requerente_verbo = tipoReq === 'empresa' ? 'com sede na' : 'residente na';
+
+  return {
+    autor_nome: document.getElementById('autor_nome').value,
+    autor_morada: document.getElementById('autor_morada').value,
+    autor_cc1: document.getElementById('autor_cc1').value,
+    autor_cc2: document.getElementById('autor_cc2').value,
+    autor_cc3: document.getElementById('autor_cc3').value,
+    autor_cc_dia: document.getElementById('autor_cc_dia').value,
+    autor_cc_mes: document.getElementById('autor_cc_mes').value,
+    autor_cc_ano: document.getElementById('autor_cc_ano').value,
+    autor_nif: document.getElementById('autor_nif').value,
+    autor_noe: document.getElementById('autor_noe').value,
+    codigo_verificacao: document.getElementById('codigo_verificacao').value,
+    especialidade: especialidadeFinal,
+    operacao_urbanistica: document.getElementById('operacao_urbanistica').value,
+    tipo_obra: document.getElementById('tipo_obra').value,
+    obra_morada: document.getElementById('obra_morada').value,
+    procedimento: procedimento,
+    procedimento_verbo: pMap.verbo,
+    procedimento_cujoa: pMap.cujoa,
+    requerente_nome: document.getElementById('requerente_nome').value,
+    requerente_verbo: requerente_verbo,
+    requerente_morada: document.getElementById('requerente_morada').value,
+    data_dia: document.getElementById('data_dia').value,
+    data_mes: document.getElementById('data_mes').value,
+    data_ano: document.getElementById('data_ano').value,
+    nproj: document.getElementById('nproj').value || '000',
+    revisao: document.getElementById('revisao').value || 'R00',
+    fase: FASE_MAP[procedimento] || 'X'
+  };
+}
+
+function validar(d){
+  const obrig = ['autor_nome','codigo_verificacao','especialidade','obra_morada','requerente_nome','requerente_morada'];
+  const faltam = obrig.filter(k => !d[k]);
+  return faltam;
+}
+
+// ---------------------------------------------------------
+// GERAR WORD (docxtemplater)
+// ---------------------------------------------------------
+
+document.getElementById('btnDocx').addEventListener('click', async function(){
+  const statusEl = document.getElementById('status');
+  const data = getFormData();
+  const faltam = validar(data);
+  if (faltam.length){
+    statusEl.textContent = 'Preenche todos os campos obrigatórios antes de gerar.';
+    return;
+  }
+
+  statusEl.textContent = 'A gerar documento Word...';
+  this.disabled = true;
+
+  try {
+    const response = await fetch('termo_template.docx');
+    const arrayBuffer = await response.arrayBuffer();
+    const zip = new PizZip(arrayBuffer);
+    const doc = new window.docxtemplater(zip, { paragraphLoop: true, linebreaks: true });
+    doc.render(data);
+    const blob = doc.getZip().generate({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+
+    const filename = `${data.nproj}.${data.fase}.${data.especialidade}01.${data.revisao} - Termo de Responsabilidade.docx`;
+
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(link.href);
+
+    statusEl.textContent = 'Word gerado com sucesso.';
+  } catch (err){
+    console.error(err);
+    statusEl.textContent = 'Erro ao gerar o Word. Verifica se o ficheiro termo_template.docx está na mesma pasta.';
+  }
+  this.disabled = false;
+});
+
+// ---------------------------------------------------------
+// GERAR PDF (html2pdf a partir de um preview escondido)
+// ---------------------------------------------------------
+
+document.getElementById('btnPdf').addEventListener('click', async function(){
+  const statusEl = document.getElementById('status');
+  const data = getFormData();
+  const faltam = validar(data);
+  if (faltam.length){
+    statusEl.textContent = 'Preenche todos os campos obrigatórios antes de gerar.';
+    return;
+  }
+
+  statusEl.textContent = 'A gerar PDF...';
+  this.disabled = true;
+
+  const bodyText = `${data.autor_nome}, Engenheiro Civil, com domicílio profissional na ${data.autor_morada}, portador do Cartão de Cidadão n.º CC ${data.autor_cc1} ${data.autor_cc2} ${data.autor_cc3}, válido até ${data.autor_cc_dia}/${data.autor_cc_mes}/${data.autor_cc_ano}, contribuinte n.º ${data.autor_nif}, inscrito na Ordem dos Engenheiros, portador da Cédula Profissional n.º ${data.autor_noe}, sócio gerente de BOassociados, Projectos de Engenharia Lda., com sede na Casa dos Coimbras, Largo de Santa Cruz, n.º506, 2.º andar, 4700-322 Braga, contribuinte n.º 506961516, declara, para efeitos do disposto no n.º 1 do artigo 10.º do Decreto-Lei n.º 555/99, de 16 de dezembro, na sua actual redacção, que o Projeto de ${data.especialidade}, de que é autor, relativo à obra de ${data.operacao_urbanistica} de ${data.tipo_obra}, localizada ${data.obra_morada}, ${data.procedimento_cujoa} ${data.procedimento} foi ${data.procedimento_verbo} por ${data.requerente_nome}, ${data.requerente_verbo} ${data.requerente_morada}, observa as normas legais e regulamentares aplicáveis, designadamente as normas técnicas de construção em vigor, e está conforme com os planos municipais ou intermunicipais de ordenamento do território aplicáveis à pretensão.`;
+
+  document.getElementById('pv_especialidade').textContent = data.especialidade.toUpperCase();
+  document.getElementById('pv_body').textContent = bodyText;
+  document.getElementById('pv_codigo').textContent = `Código de verificação das competências profissionais ${data.codigo_verificacao}`;
+  document.getElementById('pv_data').textContent = `Braga, ${data.data_dia} de ${data.data_mes} de ${data.data_ano}`;
+  document.getElementById('pv_autor_nome').textContent = data.autor_nome;
+
+  const el = document.getElementById('pdfPreview');
+  const filename = `${data.nproj}.${data.fase}.${data.especialidade}01.${data.revisao} - Termo de Responsabilidade.pdf`;
+
+  try {
+    await html2pdf().set({
+      margin: 0,
+      filename: filename,
+      html2canvas: { scale: 2 },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    }).from(el).save();
+    statusEl.textContent = 'PDF gerado com sucesso.';
+  } catch (err){
+    console.error(err);
+    statusEl.textContent = 'Erro ao gerar o PDF.';
+  }
+  this.disabled = false;
+});
+</script>
+
+</body>
+</html>
