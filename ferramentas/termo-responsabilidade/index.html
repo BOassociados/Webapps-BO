@@ -4,11 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Termo de Responsabilidade | BO Associados</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/docxtemplater/3.44.0/js/docxtemplater.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pizzip/3.1.4/pizzip.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pizzip/3.1.4/pizzip-utils.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<!-- PizZip is not hosted on cdnjs — official docxtemplater docs point to unpkg/jsDelivr -->
+<script src="https://cdn.jsdelivr.net/npm/pizzip@3.1.6/dist/pizzip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/docxtemplater/3.66.4/docxtemplater.js"></script>
+<!-- html2pdf 0.10.1 has a known "blank PDF" bug on some setups — 0.9.3 is the stable fix -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
@@ -214,11 +214,18 @@
     margin-top: 4px;
   }
 
-  /* Hidden print-only preview used to generate the PDF */
+  /* Print-only preview used to generate the PDF. Kept fully out of the
+     render tree (display:none) until the moment of capture — html2canvas
+     cannot capture elements that are off-screen (left:-9999px), opacity:0,
+     or visibility:hidden, so the script briefly flips this to visible
+     (position:fixed, on top of everything) only while html2pdf runs, then
+     hides it again straight after. */
   #pdfPreview{
+    display: none;
     position: fixed;
-    left: -9999px;
     top: 0;
+    left: 0;
+    z-index: 9999;
     width: 210mm;
     background: white;
     color: #111;
@@ -671,9 +678,16 @@ document.getElementById('btnDocx').addEventListener('click', async function(){
 
   try {
     const response = await fetch('termo_template.docx');
+    if (!response.ok){
+      throw new Error(`Não encontrei o termo_template.docx (HTTP ${response.status}). Confirma que está na mesma pasta do index.html.`);
+    }
     const arrayBuffer = await response.arrayBuffer();
     const zip = new PizZip(arrayBuffer);
-    const doc = new window.docxtemplater(zip, { paragraphLoop: true, linebreaks: true });
+    const DocxtemplaterCtor = window.docxtemplater || window.Docxtemplater;
+    if (!DocxtemplaterCtor){
+      throw new Error('A biblioteca docxtemplater não carregou (verifica a ligação à internet / CDN).');
+    }
+    const doc = new DocxtemplaterCtor(zip, { paragraphLoop: true, linebreaks: true });
     doc.render(data);
     const blob = doc.getZip().generate({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
 
@@ -688,7 +702,11 @@ document.getElementById('btnDocx').addEventListener('click', async function(){
     statusEl.textContent = 'Word gerado com sucesso.';
   } catch (err){
     console.error(err);
-    statusEl.textContent = 'Erro ao gerar o Word. Verifica se o ficheiro termo_template.docx está na mesma pasta.';
+    let detail = err.message || String(err);
+    if (err.properties && err.properties.errors && err.properties.errors.length){
+      detail = err.properties.errors.map(e => e.properties && e.properties.explanation ? e.properties.explanation : e.message).join('; ');
+    }
+    statusEl.textContent = 'Erro ao gerar o Word: ' + detail;
   }
   this.disabled = false;
 });
@@ -720,17 +738,27 @@ document.getElementById('btnPdf').addEventListener('click', async function(){
   const el = document.getElementById('pdfPreview');
   const filename = `${data.nproj}.${data.fase}.${data.especialidade}01.${data.revisao} - Termo de Responsabilidade.pdf`;
 
+  // html2canvas only captures elements that are actually rendered on screen —
+  // we briefly make the preview visible (it's fixed on top of everything,
+  // covering the page) just long enough to capture it, then hide it again.
+  el.style.display = 'block';
+
   try {
+    // let the browser paint the now-visible element before we snapshot it
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
     await html2pdf().set({
       margin: 0,
       filename: filename,
-      html2canvas: { scale: 2 },
+      html2canvas: { scale: 2, useCORS: true },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     }).from(el).save();
     statusEl.textContent = 'PDF gerado com sucesso.';
   } catch (err){
     console.error(err);
     statusEl.textContent = 'Erro ao gerar o PDF.';
+  } finally {
+    el.style.display = 'none';
   }
   this.disabled = false;
 });
