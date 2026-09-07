@@ -7,8 +7,6 @@
 <!-- PizZip is not hosted on cdnjs — official docxtemplater docs point to unpkg/jsDelivr -->
 <script src="https://cdn.jsdelivr.net/npm/pizzip@3.1.6/dist/pizzip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/docxtemplater/3.66.4/docxtemplater.js"></script>
-<!-- html2pdf 0.10.1 has a known "blank PDF" bug on some setups — 0.9.3 is the stable fix -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
@@ -214,18 +212,10 @@
     margin-top: 4px;
   }
 
-  /* Print-only preview used to generate the PDF. Kept fully out of the
-     render tree (display:none) until the moment of capture — html2canvas
-     cannot capture elements that are off-screen (left:-9999px), opacity:0,
-     or visibility:hidden, so the script briefly flips this to visible
-     (position:fixed, on top of everything) only while html2pdf runs, then
-     hides it again straight after. */
+  /* Preview used to generate the PDF via the browser's native "Print to PDF".
+     Hidden on screen; only shown (via @media print below) when printing. */
   #pdfPreview{
     display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 9999;
     width: 210mm;
     background: white;
     color: #111;
@@ -238,6 +228,24 @@
   #pdfPreview h3{ text-align: center; font-size: 12pt; margin-bottom: 4px; }
   #pdfPreview p{ margin-bottom: 14px; text-align: justify; }
   #pdfPreview .sig{ margin-top: 40px; }
+
+  /* When the browser's print dialog is triggered, hide everything except
+     the preview, and let it fill the printed page. No canvas/screenshot
+     library involved — this uses the browser's own rendering, so it never
+     produces a blank page. */
+  @media print{
+    body *{ visibility: hidden; }
+    #pdfPreview, #pdfPreview *{ visibility: visible; }
+    #pdfPreview{
+      display: block;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      margin: 0;
+    }
+    @page{ size: A4; margin: 0; }
+  }
 
   @media (max-width: 640px){
     .row, .row3{ grid-template-columns: 1fr; }
@@ -712,10 +720,18 @@ document.getElementById('btnDocx').addEventListener('click', async function(){
 });
 
 // ---------------------------------------------------------
-// GERAR PDF (html2pdf a partir de um preview escondido)
+// GERAR PDF (impressão nativa do browser — "Guardar como PDF")
 // ---------------------------------------------------------
 
-document.getElementById('btnPdf').addEventListener('click', async function(){
+const originalTitle = document.title;
+
+// Restore the real page title once the print dialog closes, whichever
+// button (Save/Cancel) the person used.
+window.addEventListener('afterprint', function(){
+  document.title = originalTitle;
+});
+
+document.getElementById('btnPdf').addEventListener('click', function(){
   const statusEl = document.getElementById('status');
   const data = getFormData();
   const faltam = validar(data);
@@ -723,9 +739,6 @@ document.getElementById('btnPdf').addEventListener('click', async function(){
     statusEl.textContent = 'Preenche todos os campos obrigatórios antes de gerar.';
     return;
   }
-
-  statusEl.textContent = 'A gerar PDF...';
-  this.disabled = true;
 
   const bodyText = `${data.autor_nome}, Engenheiro Civil, com domicílio profissional na ${data.autor_morada}, portador do Cartão de Cidadão n.º CC ${data.autor_cc1} ${data.autor_cc2} ${data.autor_cc3}, válido até ${data.autor_cc_dia}/${data.autor_cc_mes}/${data.autor_cc_ano}, contribuinte n.º ${data.autor_nif}, inscrito na Ordem dos Engenheiros, portador da Cédula Profissional n.º ${data.autor_noe}, sócio gerente de BOassociados, Projectos de Engenharia Lda., com sede na Casa dos Coimbras, Largo de Santa Cruz, n.º506, 2.º andar, 4700-322 Braga, contribuinte n.º 506961516, declara, para efeitos do disposto no n.º 1 do artigo 10.º do Decreto-Lei n.º 555/99, de 16 de dezembro, na sua actual redacção, que o Projeto de ${data.especialidade}, de que é autor, relativo à obra de ${data.operacao_urbanistica} de ${data.tipo_obra}, localizada ${data.obra_morada}, ${data.procedimento_cujoa} ${data.procedimento} foi ${data.procedimento_verbo} por ${data.requerente_nome}, ${data.requerente_verbo} ${data.requerente_morada}, observa as normas legais e regulamentares aplicáveis, designadamente as normas técnicas de construção em vigor, e está conforme com os planos municipais ou intermunicipais de ordenamento do território aplicáveis à pretensão.`;
 
@@ -735,31 +748,12 @@ document.getElementById('btnPdf').addEventListener('click', async function(){
   document.getElementById('pv_data').textContent = `Braga, ${data.data_dia} de ${data.data_mes} de ${data.data_ano}`;
   document.getElementById('pv_autor_nome').textContent = data.autor_nome;
 
-  const el = document.getElementById('pdfPreview');
-  const filename = `${data.nproj}.${data.fase}.${data.especialidade}01.${data.revisao} - Termo de Responsabilidade.pdf`;
+  // Most browsers suggest the current document title as the default
+  // filename in the "Save as PDF" dialog.
+  document.title = `${data.nproj}.${data.fase}.${data.especialidade}01.${data.revisao} - Termo de Responsabilidade`;
 
-  // html2canvas only captures elements that are actually rendered on screen —
-  // we briefly make the preview visible (it's fixed on top of everything,
-  // covering the page) just long enough to capture it, then hide it again.
-  el.style.display = 'block';
-
-  try {
-    // let the browser paint the now-visible element before we snapshot it
-    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-
-    await html2pdf().set({
-      margin: 0,
-      filename: filename,
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    }).from(el).save();
-    statusEl.textContent = 'PDF gerado com sucesso.';
-  } catch (err){
-    console.error(err);
-    statusEl.textContent = 'Erro ao gerar o PDF.';
-  } finally {
-    el.style.display = 'none';
-  }
+  statusEl.textContent = 'Escolhe "Guardar como PDF" na janela de impressão.';
+  window.print();
   this.disabled = false;
 });
 </script>
