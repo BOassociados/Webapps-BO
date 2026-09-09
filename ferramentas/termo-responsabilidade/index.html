@@ -7,6 +7,9 @@
 <!-- PizZip is not hosted on cdnjs — official docxtemplater docs point to unpkg/jsDelivr -->
 <script src="https://cdn.jsdelivr.net/npm/pizzip@3.1.6/dist/pizzip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/docxtemplater/3.66.4/docxtemplater.js"></script>
+<!-- docx-preview renders the generated .docx for real in the browser (needs its own jszip copy) -->
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/docx-preview@0.3.7/dist/docx-preview.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
@@ -212,37 +215,33 @@
     margin-top: 4px;
   }
 
-  /* Preview used to generate the PDF via the browser's native "Print to PDF".
-     Hidden on screen; only shown (via @media print below) when printing. */
-  #pdfPreview{
+  /* Container where docx-preview renders the real generated .docx.
+     Hidden on screen; only shown (via @media print below) while printing.
+     docx-preview injects its own <style> + page-sized divs in here, so we
+     deliberately keep our own rules minimal — we don't want to fight its
+     layout, just center it and hide it until print time. */
+  #docxRenderContainer{
     display: none;
-    width: 210mm;
-    background: white;
-    color: #111;
-    padding: 25mm 20mm;
-    font-family: 'Arial', sans-serif;
-    font-size: 11pt;
-    line-height: 1.5;
+    background: #666;
+    padding: 20px 0;
   }
-  #pdfPreview .logo{ height: 46px; margin-bottom: 30px; }
-  #pdfPreview h3{ text-align: center; font-size: 12pt; margin-bottom: 4px; }
-  #pdfPreview p{ margin-bottom: 14px; text-align: justify; }
-  #pdfPreview .sig{ margin-top: 40px; }
 
   /* When the browser's print dialog is triggered, hide everything except
-     the preview, and let it fill the printed page. No canvas/screenshot
-     library involved — this uses the browser's own rendering, so it never
-     produces a blank page. */
+     the rendered document, and let it fill the printed page. No
+     canvas/screenshot library involved — this uses the browser's own
+     rendering, so it never produces a blank page. */
   @media print{
     body *{ visibility: hidden; }
-    #pdfPreview, #pdfPreview *{ visibility: visible; }
-    #pdfPreview{
+    #docxRenderContainer, #docxRenderContainer *{ visibility: visible; }
+    #docxRenderContainer{
       display: block;
       position: absolute;
       top: 0;
       left: 0;
       width: 100%;
       margin: 0;
+      padding: 0;
+      background: white;
     }
     @page{ size: A4; margin: 0; }
   }
@@ -449,19 +448,8 @@
 
 </div>
 
-<!-- Hidden preview used only to render the PDF -->
-<div id="pdfPreview">
-  <img src="logo_color.png" class="logo" onerror="this.style.display='none'">
-  <h3 id="pv_title1">TERMO DE RESPONSABILIDADE DO TÉCNICO AUTOR DO</h3>
-  <h3 id="pv_title2" style="margin-bottom:30px;">PROJETO DE <span id="pv_especialidade"></span></h3>
-  <p id="pv_body"></p>
-  <p id="pv_codigo"></p>
-  <p id="pv_data" style="margin-top:30px; text-align:center;"></p>
-  <p class="sig" style="text-align:center;">
-    <span id="pv_autor_nome"></span><br>
-    (documento assinado digitalmente)
-  </p>
-</div>
+<!-- Container where docx-preview renders the real generated .docx for printing -->
+<div id="docxRenderContainer"></div>
 
 <script>
 // ---------------------------------------------------------
@@ -669,7 +657,37 @@ function validar(d){
 }
 
 // ---------------------------------------------------------
-// GERAR WORD (docxtemplater)
+// GERAR O DOCX (função partilhada pelos dois botões)
+// ---------------------------------------------------------
+
+async function gerarDocxBlob(data){
+  const response = await fetch('termo_template.docx');
+  if (!response.ok){
+    throw new Error(`Não encontrei o termo_template.docx (HTTP ${response.status}). Confirma que está na mesma pasta do index.html.`);
+  }
+  const arrayBuffer = await response.arrayBuffer();
+  const zip = new PizZip(arrayBuffer);
+  const DocxtemplaterCtor = window.docxtemplater || window.Docxtemplater;
+  if (!DocxtemplaterCtor){
+    throw new Error('A biblioteca docxtemplater não carregou (verifica a ligação à internet / CDN).');
+  }
+  const doc = new DocxtemplaterCtor(zip, { paragraphLoop: true, linebreaks: true });
+  doc.render(data);
+  const blob = doc.getZip().generate({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+  const filename = `${data.nproj}.${data.fase}.${data.especialidade}01.${data.revisao} - Termo de Responsabilidade`;
+  return { blob, filename };
+}
+
+function mensagemErro(err){
+  let detail = err.message || String(err);
+  if (err.properties && err.properties.errors && err.properties.errors.length){
+    detail = err.properties.errors.map(e => e.properties && e.properties.explanation ? e.properties.explanation : e.message).join('; ');
+  }
+  return detail;
+}
+
+// ---------------------------------------------------------
+// GERAR WORD
 // ---------------------------------------------------------
 
 document.getElementById('btnDocx').addEventListener('click', async function(){
@@ -685,42 +703,27 @@ document.getElementById('btnDocx').addEventListener('click', async function(){
   this.disabled = true;
 
   try {
-    const response = await fetch('termo_template.docx');
-    if (!response.ok){
-      throw new Error(`Não encontrei o termo_template.docx (HTTP ${response.status}). Confirma que está na mesma pasta do index.html.`);
-    }
-    const arrayBuffer = await response.arrayBuffer();
-    const zip = new PizZip(arrayBuffer);
-    const DocxtemplaterCtor = window.docxtemplater || window.Docxtemplater;
-    if (!DocxtemplaterCtor){
-      throw new Error('A biblioteca docxtemplater não carregou (verifica a ligação à internet / CDN).');
-    }
-    const doc = new DocxtemplaterCtor(zip, { paragraphLoop: true, linebreaks: true });
-    doc.render(data);
-    const blob = doc.getZip().generate({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-
-    const filename = `${data.nproj}.${data.fase}.${data.especialidade}01.${data.revisao} - Termo de Responsabilidade.docx`;
-
+    const { blob, filename } = await gerarDocxBlob(data);
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = filename;
+    link.download = filename + '.docx';
     link.click();
     URL.revokeObjectURL(link.href);
-
     statusEl.textContent = 'Word gerado com sucesso.';
   } catch (err){
     console.error(err);
-    let detail = err.message || String(err);
-    if (err.properties && err.properties.errors && err.properties.errors.length){
-      detail = err.properties.errors.map(e => e.properties && e.properties.explanation ? e.properties.explanation : e.message).join('; ');
-    }
-    statusEl.textContent = 'Erro ao gerar o Word: ' + detail;
+    statusEl.textContent = 'Erro ao gerar o Word: ' + mensagemErro(err);
   }
   this.disabled = false;
 });
 
 // ---------------------------------------------------------
-// GERAR PDF (impressão nativa do browser — "Guardar como PDF")
+// GERAR PDF
+// Em vez de escrever o texto do termo outra vez em HTML (o que
+// facilmente desalinha do Word), geramos o mesmo .docx e desenhamo-lo
+// no ecrã com a biblioteca docx-preview — fica sempre visualmente
+// igual ao ficheiro Word, porque é o mesmo ficheiro. Depois usamos a
+// função nativa de imprimir do browser para gravar como PDF.
 // ---------------------------------------------------------
 
 const originalTitle = document.title;
@@ -729,9 +732,10 @@ const originalTitle = document.title;
 // button (Save/Cancel) the person used.
 window.addEventListener('afterprint', function(){
   document.title = originalTitle;
+  document.getElementById('docxRenderContainer').style.display = 'none';
 });
 
-document.getElementById('btnPdf').addEventListener('click', function(){
+document.getElementById('btnPdf').addEventListener('click', async function(){
   const statusEl = document.getElementById('status');
   const data = getFormData();
   const faltam = validar(data);
@@ -740,20 +744,45 @@ document.getElementById('btnPdf').addEventListener('click', function(){
     return;
   }
 
-  const bodyText = `${data.autor_nome}, Engenheiro Civil, com domicílio profissional na ${data.autor_morada}, portador do Cartão de Cidadão n.º CC ${data.autor_cc1} ${data.autor_cc2} ${data.autor_cc3}, válido até ${data.autor_cc_dia}/${data.autor_cc_mes}/${data.autor_cc_ano}, contribuinte n.º ${data.autor_nif}, inscrito na Ordem dos Engenheiros, portador da Cédula Profissional n.º ${data.autor_noe}, sócio gerente de BOassociados, Projectos de Engenharia Lda., com sede na Casa dos Coimbras, Largo de Santa Cruz, n.º506, 2.º andar, 4700-322 Braga, contribuinte n.º 506961516, declara, para efeitos do disposto no n.º 1 do artigo 10.º do Decreto-Lei n.º 555/99, de 16 de dezembro, na sua actual redacção, que o Projeto de ${data.especialidade}, de que é autor, relativo à obra de ${data.operacao_urbanistica} de ${data.tipo_obra}, localizada ${data.obra_morada}, ${data.procedimento_cujoa} ${data.procedimento} foi ${data.procedimento_verbo} por ${data.requerente_nome}, ${data.requerente_verbo} ${data.requerente_morada}, observa as normas legais e regulamentares aplicáveis, designadamente as normas técnicas de construção em vigor, e está conforme com os planos municipais ou intermunicipais de ordenamento do território aplicáveis à pretensão.`;
+  statusEl.textContent = 'A preparar o documento para impressão...';
+  this.disabled = true;
 
-  document.getElementById('pv_especialidade').textContent = data.especialidade.toUpperCase();
-  document.getElementById('pv_body').textContent = bodyText;
-  document.getElementById('pv_codigo').textContent = `Código de verificação das competências profissionais ${data.codigo_verificacao}`;
-  document.getElementById('pv_data').textContent = `Braga, ${data.data_dia} de ${data.data_mes} de ${data.data_ano}`;
-  document.getElementById('pv_autor_nome').textContent = data.autor_nome;
+  try {
+    const { blob, filename } = await gerarDocxBlob(data);
 
-  // Most browsers suggest the current document title as the default
-  // filename in the "Save as PDF" dialog.
-  document.title = `${data.nproj}.${data.fase}.${data.especialidade}01.${data.revisao} - Termo de Responsabilidade`;
+    const container = document.getElementById('docxRenderContainer');
+    container.innerHTML = '';
 
-  statusEl.textContent = 'Escolhe "Guardar como PDF" na janela de impressão.';
-  window.print();
+    const DocxPreview = window.docx;
+    if (!DocxPreview || !DocxPreview.renderAsync){
+      throw new Error('A biblioteca docx-preview não carregou (verifica a ligação à internet / CDN).');
+    }
+
+    await DocxPreview.renderAsync(blob, container, container, {
+      inWrapper: true,
+      ignoreWidth: false,
+      ignoreHeight: false,
+      breakPages: true,
+      renderHeaders: true,
+      renderFooters: true
+    });
+
+    container.style.display = 'block';
+
+    // Most browsers suggest the current document title as the default
+    // filename in the "Save as PDF" dialog.
+    document.title = filename;
+
+    // give the browser a moment to paint the rendered pages before printing
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
+    statusEl.textContent = 'Escolhe "Guardar como PDF" na janela de impressão.';
+    window.print();
+  } catch (err){
+    console.error(err);
+    statusEl.textContent = 'Erro ao gerar o PDF: ' + mensagemErro(err);
+    document.getElementById('docxRenderContainer').style.display = 'none';
+  }
   this.disabled = false;
 });
 </script>
