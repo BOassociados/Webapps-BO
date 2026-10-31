@@ -25,7 +25,7 @@
   function exemplo() {
     return {
       app: 'sapatas-bo', versao: 1,
-      projeto: { obra: '', cliente: '', local: '', ref: 'S1', autor: '', verificador: '', data: hoje(), notas: 'Valores de exemplo: substituir pelos dados da obra.' },
+      projeto: { obra: '', cliente: '', local: '', ref: '', autor: '', verificador: '', data: '', notas: '' },
       geometria: { tipo: 'ret', B: 2.1, L: 2.1, h: 0.5, Df: 1.0, gammaC: 25, gammaAterro: 18, qSup: 0, qSupTipo: 'Q', qSupPsi0: 0.7, qSupPsi1: 0.5, qSupPsi2: 0.3 },
       pilares: [{ id: 'P1', forma: 'ret', cx: 0.4, cy: 0.4, D: 0.4, x: 0, y: 0, phi: 16 }],
       materiais: { betao: 'C30/37', aco: 'A500', cnom: 50, dg: 20, armInf: { x: { phi: 16, s: 0.2 }, y: { phi: 16, s: 0.2 } }, armSup: { ativa: false, x: { phi: 12, s: 0.2 }, y: { phi: 12, s: 0.2 } }, camadaInf: 'x', patilhas: true, seccaoRef: 'face', sMax: 0.3, sMin: 0.1, sigArr: 1 },
@@ -54,7 +54,7 @@
   }
   function vazio() {
     const e = exemplo();
-    e.projeto = { obra: '', cliente: '', local: '', ref: 'S1', autor: '', verificador: '', data: hoje(), notas: '' };
+    e.projeto = { obra: '', cliente: '', local: '', ref: '', autor: '', verificador: '', data: '', notas: '' };
     e.cargas.carac.acoes = [
       { id: 'a1', nome: 'G', tipo: 'G', cat: 'A', psi0: 0, psi1: 0, psi2: 0, val: { P1: { N: 0, Mx: 0, My: 0, Vx: 0, Vy: 0 } } },
       { id: 'a2', nome: 'Q', tipo: 'Q', cat: 'A', psi0: 0.7, psi1: 0.5, psi2: 0.3, val: { P1: { N: 0, Mx: 0, My: 0, Vx: 0, Vy: 0 } } }
@@ -82,6 +82,7 @@
     }
     if (!s.terreno.camadas.length) s.terreno.camadas = vazio().terreno.camadas;
     if (s.projeto.obra === 'Exemplo — edifício de habitação') { s.projeto.obra = ''; if (s.projeto.local === 'Braga') s.projeto.local = ''; }
+    if (s.projeto.notas === 'Valores de exemplo: substituir pelos dados da obra.') { s.projeto.notas = ''; if (s.projeto.ref === 'S1') s.projeto.ref = ''; s.projeto.data = ''; }
     return s;
   }
   function carregar() { try { const t = localStorage.getItem(KEY); if (t) return normalizar(JSON.parse(t)); } catch (e) { /* sem armazenamento */ } return null; }
@@ -136,7 +137,7 @@
     if (o.opts) {
       inp = `<select class="inp" id="${id}" data-p="${path}" data-k="${o.k || 'str'}"${r}>${o.opts.map(([val, t]) => `<option value="${esc(val)}" ${String(val) === String(v) ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>`;
     } else if (o.area) {
-      inp = `<textarea class="inp" id="${id}" data-p="${path}" data-k="str" rows="3" style="font-family:var(--f-body);font-size:13px">${esc(v)}</textarea>`;
+      inp = `<textarea class="inp" id="${id}" data-p="${path}" data-k="str" rows="3"${o.ph ? ` placeholder="${esc(o.ph)}"` : ''} style="font-family:var(--f-body);font-size:13px">${esc(v)}</textarea>`;
     } else if (o.k === 'str') {
       inp = `<input class="inp" id="${id}" data-p="${path}" data-k="str" value="${esc(v)}"${o.ph ? ` placeholder="${esc(o.ph)}"` : ''} autocomplete="off"${r}>`;
     } else {
@@ -177,9 +178,9 @@
         ${fld('Projeto / Obra', 'projeto.obra', { k: 'str', ph: '0000-00 - Nome do Projeto' })}
         ${fld('Requerente', 'projeto.cliente', { k: 'str', ph: 'Requerente' })}
         ${fld('Morada', 'projeto.local', { k: 'str', ph: 'Local da Obra' })}
-        ${row('', fld('Referência da sapata', 'projeto.ref', { k: 'str' }), fld('Data', 'projeto.data', { k: 'str' }))}
+        ${row('', fld('Referência da sapata', 'projeto.ref', { k: 'str', ph: 'S1' }), fld('Data', 'projeto.data', { k: 'str', ph: 'AAAA-MM-DD' }))}
         ${row('', fld('Autor', 'projeto.autor', { k: 'str' }), fld('Verificado por', 'projeto.verificador', { k: 'str' }))}
-        ${fld('Notas', 'projeto.notas', { area: true })}
+        ${fld('Notas', 'projeto.notas', { area: true, ph: 'Observações a incluir na memória de cálculo' })}
       </fieldset>
       <div class="note">Os dados ficam guardados neste browser. Use <b>Guardar</b> para criar um ficheiro JSON do cálculo e <b>Abrir</b> para o recuperar mais tarde ou partilhar com a equipa.</div>`;
     },
@@ -904,7 +905,7 @@
     const rOf = (c) => c && c.comb ? R.porComb.find(r => r.comb.id === c.comb.id) : null;
     const H = [];
     H.push(`<div class="report">
-      <div class="rhead"><img class="logo-img" src="logo_color.png" alt="BO Engenharia" onerror="this.outerHTML='<div class=&quot;logo&quot;>BO</div>'"><div><h1>Sapata ${esc(p.ref || '')} — memória de cálculo</h1><div>Verificação geotécnica e estrutural de sapata isolada</div></div><div class="mono" style="text-align:right;font-size:11px">${esc(p.data || '')}<br>v0.1</div></div>
+      <div class="rhead"><img class="logo-img" src="logo_color.png" alt="BO Engenharia" onerror="this.outerHTML='<div class=&quot;logo&quot;>BO</div>'"><div><h1>Sapata${p.ref ? ' ' + esc(p.ref) : ''} — memória de cálculo</h1><div>Verificação geotécnica e estrutural de sapata isolada</div></div><div class="mono" style="text-align:right;font-size:11px">${esc(p.data || '')}<br>v0.1</div></div>
       <div class="meta"><div><span>Projeto / Obra:</span> ${esc(p.obra)}</div><div><span>Requerente:</span> ${esc(p.cliente)}</div><div><span>Morada:</span> ${esc(p.local)}</div><div><span>Autor:</span> ${esc(p.autor)}</div><div><span>Referência:</span> ${esc(p.ref)}</div><div><span>Verificado por:</span> ${esc(p.verificador)}</div></div>
       ${p.notas ? `<p style="margin-top:8px"><i>${esc(p.notas)}</i></p>` : ''}`);
 
