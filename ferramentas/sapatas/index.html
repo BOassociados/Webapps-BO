@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Sapatas Isoladas</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Verificação de sapatas isoladas segundo a NP EN 1997-1 (DA1), tensões admissíveis e NP EN 1992-1-1 — BO Associados.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <a class="back" href="../../index.html">← Voltar às ferramentas</a>
+  <div class="brand">
+    <h1>Sapatas</h1>
+    <span>EC7 DA1 · σadm · EC2 · EC8 — Anexos Nacionais PT</span>
+  </div>
+  <div class="spacer"></div>
+  <div id="statusPill" class="status-pill"><span class="dot"></span><span>A calcular…</span></div>
+  <div class="actions">
+    <button class="btn" id="btnNovo" type="button">Novo</button>
+    <button class="btn" id="btnAbrir" type="button">Abrir</button>
+    <button class="btn" id="btnGuardar" type="button">Guardar</button>
+    <button class="btn primary" id="btnRelatorio" type="button">Memória de cálculo</button>
+    <input type="file" id="fileInput" accept=".json,application/json" hidden>
+  </div>
+</header>
+
+<div class="app">
+  <nav class="steps" id="steps" aria-label="Menus"></nav>
+  <section class="stage" aria-label="Área gráfica">
+    <div class="toolbar">
+      <div class="tabs" id="viewTabs" role="tablist"></div>
+      <label class="combsel" id="combWrap"><span>Combinação</span><select class="inp" id="combSel"></select></label>
+    </div>
+    <div class="canvas" id="canvas"></div>
+  </section>
+  <aside class="panel" id="panel" aria-label="Dados">
+    <div class="panel-head" id="panelHead"></div>
+    <div class="panel-body" id="panelBody"></div>
+    <div class="panel-foot" id="panelFoot"></div>
+  </aside>
+</div>
+
+<footer class="aviso">
+  <span><strong>Aviso:</strong> ferramenta de apoio ao projeto. Os resultados devem ser sempre verificados pelo técnico responsável, que assume a responsabilidade pelo dimensionamento.</span>
+  <span>BO Associados · uso interno · v0.1</span>
+</footer>
+
+<div class="overlay" id="overlay" hidden></div>
+
+<script src="calc.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
