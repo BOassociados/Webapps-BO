@@ -25,7 +25,7 @@
   function exemplo() {
     return {
       app: 'sapatas-bo', versao: 1,
-      projeto: { obra: 'Exemplo — edifício de habitação', cliente: '', local: 'Braga', ref: 'S1', autor: '', verificador: '', data: hoje(), notas: 'Valores de exemplo: substituir pelos dados da obra.' },
+      projeto: { obra: '', cliente: '', local: '', ref: 'S1', autor: '', verificador: '', data: hoje(), notas: 'Valores de exemplo: substituir pelos dados da obra.' },
       geometria: { tipo: 'ret', B: 2.1, L: 2.1, h: 0.5, Df: 1.0, gammaC: 25, gammaAterro: 18, qSup: 0, qSupTipo: 'Q', qSupPsi0: 0.7, qSupPsi1: 0.5, qSupPsi2: 0.3 },
       pilares: [{ id: 'P1', forma: 'ret', cx: 0.4, cy: 0.4, D: 0.4, x: 0, y: 0, phi: 16 }],
       materiais: { betao: 'C30/37', aco: 'A500', cnom: 50, dg: 20, armInf: { x: { phi: 16, s: 0.2 }, y: { phi: 16, s: 0.2 } }, armSup: { ativa: false, x: { phi: 12, s: 0.2 }, y: { phi: 12, s: 0.2 } }, camadaInf: 'x', patilhas: true, seccaoRef: 'face', sMax: 0.3, sMin: 0.1, sigArr: 1 },
@@ -81,6 +81,7 @@
       for (const p of s.pilares) a.val[p.id] = Object.assign({ N: 0, Mx: 0, My: 0, Vx: 0, Vy: 0 }, a.val[p.id] || {});
     }
     if (!s.terreno.camadas.length) s.terreno.camadas = vazio().terreno.camadas;
+    if (s.projeto.obra === 'Exemplo — edifício de habitação') { s.projeto.obra = ''; if (s.projeto.local === 'Braga') s.projeto.local = ''; }
     return s;
   }
   function carregar() { try { const t = localStorage.getItem(KEY); if (t) return normalizar(JSON.parse(t)); } catch (e) { /* sem armazenamento */ } return null; }
@@ -137,7 +138,7 @@
     } else if (o.area) {
       inp = `<textarea class="inp" id="${id}" data-p="${path}" data-k="str" rows="3" style="font-family:var(--f-body);font-size:13px">${esc(v)}</textarea>`;
     } else if (o.k === 'str') {
-      inp = `<input class="inp" id="${id}" data-p="${path}" data-k="str" value="${esc(v)}" autocomplete="off"${r}>`;
+      inp = `<input class="inp" id="${id}" data-p="${path}" data-k="str" value="${esc(v)}"${o.ph ? ` placeholder="${esc(o.ph)}"` : ''} autocomplete="off"${r}>`;
     } else {
       inp = `<input class="inp n" id="${id}" data-p="${path}" data-k="num" value="${esc(showNum(v))}" inputmode="decimal" autocomplete="off"${r}>`;
     }
@@ -172,9 +173,10 @@
 
   const PANELS = {
     projeto() {
-      return `<fieldset><legend>Obra</legend>
-        ${fld('Obra / projeto', 'projeto.obra', { k: 'str' })}
-        ${row('', fld('Dono de obra', 'projeto.cliente', { k: 'str' }), fld('Local', 'projeto.local', { k: 'str' }))}
+      return `<fieldset>
+        ${fld('Projeto / Obra', 'projeto.obra', { k: 'str', ph: '0000-00 - Nome do Projeto' })}
+        ${fld('Requerente', 'projeto.cliente', { k: 'str', ph: 'Requerente' })}
+        ${fld('Morada', 'projeto.local', { k: 'str', ph: 'Local da Obra' })}
         ${row('', fld('Referência da sapata', 'projeto.ref', { k: 'str' }), fld('Data', 'projeto.data', { k: 'str' }))}
         ${row('', fld('Autor', 'projeto.autor', { k: 'str' }), fld('Verificado por', 'projeto.verificador', { k: 'str' }))}
         ${fld('Notas', 'projeto.notas', { area: true })}
@@ -903,7 +905,7 @@
     const H = [];
     H.push(`<div class="report">
       <div class="rhead"><img class="logo-img" src="logo_color.png" alt="BO Engenharia" onerror="this.outerHTML='<div class=&quot;logo&quot;>BO</div>'"><div><h1>Sapata ${esc(p.ref || '')} — memória de cálculo</h1><div>Verificação geotécnica e estrutural de sapata isolada</div></div><div class="mono" style="text-align:right;font-size:11px">${esc(p.data || '')}<br>v0.1</div></div>
-      <div class="meta"><div><span>Obra:</span> ${esc(p.obra)}</div><div><span>Dono de obra:</span> ${esc(p.cliente)}</div><div><span>Local:</span> ${esc(p.local)}</div><div><span>Autor:</span> ${esc(p.autor)}</div><div><span>Referência:</span> ${esc(p.ref)}</div><div><span>Verificado por:</span> ${esc(p.verificador)}</div></div>
+      <div class="meta"><div><span>Projeto / Obra:</span> ${esc(p.obra)}</div><div><span>Requerente:</span> ${esc(p.cliente)}</div><div><span>Morada:</span> ${esc(p.local)}</div><div><span>Autor:</span> ${esc(p.autor)}</div><div><span>Referência:</span> ${esc(p.ref)}</div><div><span>Verificado por:</span> ${esc(p.verificador)}</div></div>
       ${p.notas ? `<p style="margin-top:8px"><i>${esc(p.notas)}</i></p>` : ''}`);
 
     H.push(`<h2>1. Normas e pressupostos</h2>
@@ -1048,7 +1050,7 @@ vEd = ${f(cp.val, 3)} MPa ≤ vRd = ${f(cp.lim, 3)} MPa  →  η = ${f(cp.eta, 3
       ${['phimin', 'smax', 'smin', ...g.pil.map(q => 'arr-' + q.id)].map(chk).filter(Boolean).map(c => `<tr><td>${esc(c.nome)}<br><small>${esc(c.info || c.ref)}</small></td><td class="mono">${fmtVal(c.val, c.un)}</td><td class="mono">${fmtVal(c.lim, c.un)}</td><td>${okTxt(c)}</td></tr>`).join('')}</table>`);
 
     if (R.avisos.length) H.push(`<h2>9. Avisos</h2><ul>${R.avisos.map(a => `<li>${esc(a)}</li>`).join('')}</ul>`);
-    H.push(`<div class="disc">Memória gerada pela ferramenta “Sapatas” (Webapps-BO, v0.1) em ${new Date().toLocaleString('pt-PT')}. Ferramenta de apoio ao projeto: os resultados devem ser verificados pelo técnico responsável, que assume a responsabilidade pelo dimensionamento.</div></div>`);
+    H.push(`<div class="disc">Memória gerada pela ferramenta “Sapatas” (Webapps-BO, v0.1) em ${new Date().toLocaleString('pt-PT')}. Este software é uma ferramenta auxiliar de cálculo e não substitui a validação técnica e o julgamento profissional de um engenheiro qualificado. O utilizador assume total responsabilidade pelo uso e verificação independente dos resultados.</div></div>`);
     return H.join('');
   }
   function svgPlantaReport(r) {
