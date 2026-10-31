@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Termo de Responsabilidade | BO Associados</title>
 <!-- PizZip is not hosted on cdnjs — official docxtemplater docs point to unpkg/jsDelivr -->
+<script src="../../tema.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pizzip@3.1.6/dist/pizzip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/docxtemplater/3.66.4/docxtemplater.js"></script>
 <!-- docx-preview renders the generated .docx for real in the browser (needs its own jszip copy) -->
@@ -26,6 +27,28 @@
     --blue-dim: #4d6564;
     --amber: #d98e4a;
     --red: #d97a7a;
+    --btn-ink: #0e1116;
+    --btn-hover: #97b7b5;
+    color-scheme: dark;
+  }
+
+  /* Tema claro — paleta comum às ferramentas BO (ver tema.js) */
+  :root[data-theme="light"]{
+    --bg: #eef0ee;
+    --panel: #ffffff;
+    --panel-hover: #f5f6f4;
+    --border: #d4d9d6;
+    --border-soft: #e3e7e4;
+    --text: #1a1f22;
+    --text-dim: #4f585e;
+    --text-faint: #858d92;
+    --blue: #4b7a77;
+    --blue-dim: #a9c1bf;
+    --amber: #a8701b;
+    --red: #c0412f;
+    --btn-ink: #ffffff;
+    --btn-hover: #3d6764;
+    color-scheme: light;
   }
 
   *{ box-sizing: border-box; margin:0; padding:0; }
@@ -50,6 +73,13 @@
     z-index: 10;
   }
   .back-link:hover{ color: var(--text); }
+
+  .tema-fixo{
+    position: fixed;
+    top: 18px;
+    right: 24px;
+    z-index: 10;
+  }
 
   .wrap{
     max-width: 760px;
@@ -185,7 +215,7 @@
   button{
     flex: 1;
     background: var(--blue);
-    color: #0e1116;
+    color: var(--btn-ink);
     border: none;
     padding: 14px 20px;
     font-size: 14.5px;
@@ -195,7 +225,7 @@
     cursor: pointer;
     transition: 0.15s;
   }
-  button:hover{ background: #97b7b5; }
+  button:hover{ background: var(--btn-hover); }
   button:disabled{ background: var(--border); color: var(--text-faint); cursor: not-allowed; }
   button.secondary{ background: var(--panel-hover); color: var(--text); border: 1px solid var(--border); }
   button.secondary:hover{ background: var(--border-soft); }
@@ -254,6 +284,7 @@
 <body>
 
 <a href="../../index.html" class="back-link">← Voltar às ferramentas</a>
+<div class="tema-fixo"><button type="button" data-tema-toggle></button></div>
 
 <div class="wrap">
 
