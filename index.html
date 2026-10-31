@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BOassociados | WebApps</title>
+<script>
+  /* Aplica o tema guardado antes de desenhar a página (escuro por defeito) */
+  (function(){
+    try{ if(localStorage.getItem('bo-tema') === 'light') document.documentElement.setAttribute('data-theme','light'); }catch(e){}
+  })();
+</script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
@@ -19,7 +25,34 @@
     --blue: #7EA4A2;
     --blue-dim: #4d6564;
     --amber: #d98e4a;
+    --header-bg: rgba(18,21,26,0.92);
+    --grid: rgba(111,156,243,0.06);
+    --tag-bg: rgba(111,156,243,0.09);
+    --tag-border: rgba(111,156,243,0.18);
+    --logo-filter: none;
     --max-width: 1180px;
+    color-scheme: dark;
+  }
+
+  /* Tema claro — mesma paleta da ferramenta de Sapatas */
+  :root[data-theme="light"]{
+    --bg: #eef0ee;
+    --panel: #ffffff;
+    --panel-hover: #f5f6f4;
+    --border: #d4d9d6;
+    --border-soft: #e3e7e4;
+    --text: #1a1f22;
+    --text-dim: #4f585e;
+    --text-faint: #858d92;
+    --blue: #4b7a77;
+    --blue-dim: #a9c1bf;
+    --amber: #a8701b;
+    --header-bg: rgba(238,240,238,0.92);
+    --grid: rgba(75,122,119,0.08);
+    --tag-bg: rgba(75,122,119,0.10);
+    --tag-border: rgba(75,122,119,0.24);
+    --logo-filter: brightness(0) opacity(0.88);
+    color-scheme: light;
   }
 
   *{ box-sizing: border-box; margin:0; padding:0; }
@@ -32,6 +65,7 @@
     font-family: 'Inter', system-ui, sans-serif;
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 
   a{ color: inherit; text-decoration: none; }
@@ -48,7 +82,7 @@
     border-bottom: 1px solid var(--border-soft);
     position: sticky;
     top: 0;
-    background: rgba(18,21,26,0.92);
+    background: var(--header-bg);
     backdrop-filter: blur(6px);
     z-index: 20;
   }
@@ -67,7 +101,7 @@
   }
 
   /* LOGO PLACEHOLDER — substituir por: <img src="logo.png" alt="Nome da Empresa" class="logo-mark"> */
-   .logo-mark{ height: 60px; width: auto; display: block; flex-shrink: 0; }
+   .logo-mark{ height: 60px; width: auto; display: block; flex-shrink: 0; filter: var(--logo-filter); }
 
   .brand-name{
     font-family: 'Space Grotesk', sans-serif;
@@ -92,6 +126,62 @@
 
   nav a:hover{ color: var(--text); }
 
+  .header-right{
+    display: flex;
+    align-items: center;
+    gap: 28px;
+  }
+
+  /* ---------- Interruptor de tema ---------- */
+
+  .theme-toggle{
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    width: 60px;
+    height: 30px;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--panel);
+    color: var(--text-faint);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.2s ease, border-color 0.2s ease;
+  }
+  .theme-toggle:hover{ border-color: var(--blue-dim); }
+  .theme-toggle:focus-visible{ outline: 2px solid var(--blue); outline-offset: 2px; }
+
+  .theme-toggle svg{
+    position: absolute;
+    top: 50%;
+    width: 14px;
+    height: 14px;
+    transform: translateY(-50%);
+    z-index: 1;
+    transition: color 0.2s ease;
+  }
+  .theme-toggle .ico-moon{ left: 8px; }
+  .theme-toggle .ico-sun{ right: 8px; }
+
+  .theme-toggle::before{
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--blue);
+    transition: transform 0.2s ease;
+  }
+  :root[data-theme="light"] .theme-toggle::before{ transform: translateX(30px); }
+
+  /* ícone ativo fica sobre o botão deslizante */
+  .theme-toggle .ico-moon{ color: var(--bg); }
+  :root[data-theme="light"] .theme-toggle .ico-moon{ color: var(--text-faint); }
+  :root[data-theme="light"] .theme-toggle .ico-sun{ color: #ffffff; }
+
   /* ---------- Hero ---------- */
 
   .hero{
@@ -106,8 +196,8 @@
     position: absolute;
     inset: 0;
     background-image:
-      repeating-linear-gradient(0deg, rgba(111,156,243,0.06) 0, rgba(111,156,243,0.06) 1px, transparent 1px, transparent 64px),
-      repeating-linear-gradient(90deg, rgba(111,156,243,0.06) 0, rgba(111,156,243,0.06) 1px, transparent 1px, transparent 64px);
+      repeating-linear-gradient(0deg, var(--grid) 0, var(--grid) 1px, transparent 1px, transparent 64px),
+      repeating-linear-gradient(90deg, var(--grid) 0, var(--grid) 1px, transparent 1px, transparent 64px);
     mask-image: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent 85%);
     pointer-events: none;
   }
@@ -229,8 +319,8 @@
     font-family: 'IBM Plex Mono', monospace;
     font-size: 10.5px;
     color: var(--blue);
-    background: rgba(111,156,243,0.09);
-    border: 1px solid rgba(111,156,243,0.18);
+    background: var(--tag-bg);
+    border: 1px solid var(--tag-border);
     padding: 3px 7px;
     border-radius: 3px;
   }
@@ -308,15 +398,21 @@
         <img src="logo_white.png" class="logo-mark" alt="BO Associados">
         <div>
           <div class="brand-name">BO Associados</div>
-          <span class="brand-sub">Ferramentas de Engenharia</span>
+          <span class="brand-sub">Projetos de Engenharia</span>
         </div>
       </div>
-      <nav>
-        <a href="#geral">Geral</a>
-        <a href="#estruturas">Estruturas</a>
-        <a href="#geotecnia">Geotecnia</a>
-        <a href="#hidraulicas">Instalações Hidráulicas</a>
-      </nav>
+      <div class="header-right">
+        <nav>
+          <a href="#geral">Geral</a>
+          <a href="#estruturas">Estruturas</a>
+          <a href="#geotecnia">Geotecnia</a>
+          <a href="#hidraulicas">Instalações Hidráulicas</a>
+        </nav>
+        <button type="button" class="theme-toggle" id="themeToggle" role="switch" aria-checked="false" aria-label="Tema claro" title="Alternar tema claro / escuro">
+          <svg class="ico-moon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+          <svg class="ico-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2" fill="currentColor" stroke="none"/><path d="M12 1.8v2.4M12 19.8v2.4M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M1.8 12h2.4M19.8 12h2.4M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/></svg>
+        </button>
+      </div>
     </div>
   </header>
 
@@ -421,7 +517,7 @@
             <span class="tag">EC8</span>
           </div>
           <h3>Sapatas isoladas</h3>
-          <p>Terreno (Anexo D e σadm), deslizamento, derrube, assentamento, flexão e punçoamento. Até 4 pilares, com memória de cálculo.</p>
+          <p>Terreno (σadm e Anexo D), derrube, deslizamento, assentamento, flexão e punçoamento. Até 4 pilares, com memória de cálculo.</p>
           <span class="card-link">Abrir calculadora</span>
         </a>
 
@@ -459,6 +555,24 @@
       <span>Verificar sempre os resultados. Projeto Piloto.</span>
     </div>
   </footer>
+
+  <script>
+    (function(){
+      var root = document.documentElement;
+      var btn = document.getElementById('themeToggle');
+      function sync(){
+        var light = root.getAttribute('data-theme') === 'light';
+        btn.setAttribute('aria-checked', light ? 'true' : 'false');
+      }
+      btn.addEventListener('click', function(){
+        var light = root.getAttribute('data-theme') !== 'light';
+        if(light) root.setAttribute('data-theme','light'); else root.removeAttribute('data-theme');
+        try{ localStorage.setItem('bo-tema', light ? 'light' : 'dark'); }catch(e){}
+        sync();
+      });
+      sync();
+    })();
+  </script>
 
 </body>
 </html>
