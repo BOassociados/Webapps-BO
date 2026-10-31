@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Utilitário DWFx | BO Associados</title>
+    <script src="../../tema.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
@@ -20,6 +21,29 @@
             --blue: #6f9cf3;
             --blue-dim: #3d5a94;
             --green: #6fcf97;
+            --btn-ink: #0e1116;
+            --btn-hover: #85aaf5;
+            --drag-bg: rgba(111,156,243,0.08);
+            color-scheme: dark;
+        }
+
+        /* Tema claro — paleta comum às ferramentas BO (ver tema.js) */
+        :root[data-theme="light"]{
+            --bg: #eef0ee;
+            --panel: #ffffff;
+            --panel-hover: #f5f6f4;
+            --border: #d4d9d6;
+            --border-soft: #e3e7e4;
+            --text: #1a1f22;
+            --text-dim: #4f585e;
+            --text-faint: #858d92;
+            --blue: #4b7a77;
+            --blue-dim: #a9c1bf;
+            --green: #2f8a57;
+            --btn-ink: #ffffff;
+            --btn-hover: #3d6764;
+            --drag-bg: rgba(75,122,119,0.10);
+            color-scheme: light;
         }
 
         *{ box-sizing: border-box; margin:0; padding:0; }
@@ -51,6 +75,13 @@
         }
 
         .back-link:hover{ color: var(--text); }
+
+        .tema-fixo{
+            position: fixed;
+            top: 18px;
+            right: 24px;
+            z-index: 10;
+        }
 
         .container {
             background: var(--panel);
@@ -104,7 +135,7 @@
         }
 
         .drop-zone.dragover {
-            background: rgba(111,156,243,0.08);
+            background: var(--drag-bg);
             border-color: var(--blue);
             color: var(--text);
         }
@@ -139,7 +170,7 @@
 
         button {
             background: var(--blue);
-            color: #0e1116;
+            color: var(--btn-ink);
             border: none;
             padding: 14px 28px;
             font-size: 14.5px;
@@ -151,7 +182,7 @@
             transition: 0.15s;
         }
 
-        button:hover { background: #85aaf5; }
+        button:hover { background: var(--btn-hover); }
 
         button:disabled {
             background: var(--border);
@@ -171,6 +202,7 @@
 <body>
 
 <a href="../../index.html" class="back-link">← Voltar às ferramentas</a>
+<div class="tema-fixo"><button type="button" data-tema-toggle></button></div>
 
 <div class="container">
     <div class="eyebrow">Geral · Autodesk</div>

@@ -4,12 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BOassociados | WebApps</title>
-<script>
-  /* Aplica o tema guardado antes de desenhar a página (escuro por defeito) */
-  (function(){
-    try{ if(localStorage.getItem('bo-tema') === 'light') document.documentElement.setAttribute('data-theme','light'); }catch(e){}
-  })();
-</script>
+<script src="tema.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
@@ -132,55 +127,6 @@
     gap: 28px;
   }
 
-  /* ---------- Interruptor de tema ---------- */
-
-  .theme-toggle{
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    width: 60px;
-    height: 30px;
-    padding: 0;
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    background: var(--panel);
-    color: var(--text-faint);
-    cursor: pointer;
-    flex-shrink: 0;
-    transition: background 0.2s ease, border-color 0.2s ease;
-  }
-  .theme-toggle:hover{ border-color: var(--blue-dim); }
-  .theme-toggle:focus-visible{ outline: 2px solid var(--blue); outline-offset: 2px; }
-
-  .theme-toggle svg{
-    position: absolute;
-    top: 50%;
-    width: 14px;
-    height: 14px;
-    transform: translateY(-50%);
-    z-index: 1;
-    transition: color 0.2s ease;
-  }
-  .theme-toggle .ico-moon{ left: 8px; }
-  .theme-toggle .ico-sun{ right: 8px; }
-
-  .theme-toggle::before{
-    content: "";
-    position: absolute;
-    top: 3px;
-    left: 3px;
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    background: var(--blue);
-    transition: transform 0.2s ease;
-  }
-  :root[data-theme="light"] .theme-toggle::before{ transform: translateX(30px); }
-
-  /* ícone ativo fica sobre o botão deslizante */
-  .theme-toggle .ico-moon{ color: var(--bg); }
-  :root[data-theme="light"] .theme-toggle .ico-moon{ color: var(--text-faint); }
-  :root[data-theme="light"] .theme-toggle .ico-sun{ color: #ffffff; }
 
   /* ---------- Hero ---------- */
 
@@ -408,10 +354,7 @@
           <a href="#geotecnia">Geotecnia</a>
           <a href="#hidraulicas">Instalações Hidráulicas</a>
         </nav>
-        <button type="button" class="theme-toggle" id="themeToggle" role="switch" aria-checked="false" aria-label="Tema claro" title="Alternar tema claro / escuro">
-          <svg class="ico-moon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
-          <svg class="ico-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2" fill="currentColor" stroke="none"/><path d="M12 1.8v2.4M12 19.8v2.4M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M1.8 12h2.4M19.8 12h2.4M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/></svg>
-        </button>
+        <button type="button" data-tema-toggle></button>
       </div>
     </div>
   </header>
@@ -555,24 +498,6 @@
       <span>Verificar sempre os resultados. Projeto Piloto.</span>
     </div>
   </footer>
-
-  <script>
-    (function(){
-      var root = document.documentElement;
-      var btn = document.getElementById('themeToggle');
-      function sync(){
-        var light = root.getAttribute('data-theme') === 'light';
-        btn.setAttribute('aria-checked', light ? 'true' : 'false');
-      }
-      btn.addEventListener('click', function(){
-        var light = root.getAttribute('data-theme') !== 'light';
-        if(light) root.setAttribute('data-theme','light'); else root.removeAttribute('data-theme');
-        try{ localStorage.setItem('bo-tema', light ? 'light' : 'dark'); }catch(e){}
-        sync();
-      });
-      sync();
-    })();
-  </script>
 
 </body>
 </html>
