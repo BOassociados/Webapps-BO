@@ -19,7 +19,7 @@
   const TIPOS_ACAO = [['G', 'G — permanente'], ['Q', 'Q — sobrecarga'], ['W', 'W — vento'], ['S', 'S — neve'], ['E', 'E — sismo (AEd)']];
   const TIPOS_COMB = [['A1', 'ELU fundamental (A1)'], ['A2', 'ELU A2 (DA1-C2)'], ['EQU', 'EQU'], ['SIS', 'Sísmica'], ['CAR', 'ELS característica'], ['FREQ', 'ELS frequente'], ['QP', 'ELS quase-permanente']];
   const TIPO_LBL = { A1: 'ELU · A1 (DA1-C1)', A2: 'ELU · A2 (DA1-C2)', EQU: 'EQU', SIS: 'Sísmica', CAR: 'ELS característica', FREQ: 'ELS frequente', QP: 'ELS quase-permanente' };
-  const PHIS = [8, 10, 12, 16, 20, 25, 32];
+  const PHIS = [10, 12, 16, 20, 25, 32]; // AN: φmin = 10 mm em sapatas (NA–9.8.2.1) e pilares (NA–9.5.2)
 
   function hoje() { const d = new Date(); return d.toISOString().slice(0, 10); }
   function exemplo() {
@@ -81,6 +81,7 @@
       for (const p of s.pilares) a.val[p.id] = Object.assign({ N: 0, Mx: 0, My: 0, Vx: 0, Vy: 0 }, a.val[p.id] || {});
     }
     if (!s.terreno.camadas.length) s.terreno.camadas = vazio().terreno.camadas;
+    for (const m of [s.materiais.armInf.x, s.materiais.armInf.y, s.materiais.armSup.x, s.materiais.armSup.y, ...s.pilares]) if (+m.phi < 10) m.phi = 10;
     if (s.projeto.obra === 'Exemplo — edifício de habitação') { s.projeto.obra = ''; if (s.projeto.local === 'Braga') s.projeto.local = ''; }
     if (s.projeto.notas === 'Valores de exemplo: substituir pelos dados da obra.') { s.projeto.notas = ''; if (s.projeto.ref === 'S1') s.projeto.ref = ''; s.projeto.data = ''; }
     return s;
@@ -253,14 +254,15 @@
       const bet = C.betao(S.materiais.betao), ac = C.aco(S.materiais.aco);
       return `<fieldset><legend>Materiais</legend>
         ${row('', fld('Betão', 'materiais.betao', { opts: C.BETOES.map(x => [x, x]) }), fld('Aço', 'materiais.aco', { opts: [['A500', 'A500 NR'], ['A400', 'A400 NR']] }))}
-        ${row('', fld('Recobrimento nominal', 'materiais.cnom', { u: 'mm', hint: 'Betonagem sobre betão de limpeza (EC2 4.4.1.3(4)).' }), fld('Máx. agregado dg', 'materiais.dg', { u: 'mm' }))}
+        ${row('', fld('Recobrimento nominal', 'materiais.cnom', { u: 'mm' }), fld('Máx. agregado dg', 'materiais.dg', { u: 'mm' }))}
+        <p class="hint">Betonagem sobre betão de limpeza (EC2 4.4.1.3(4)).</p>
         ${info([['fcd', f(bet.fcd, 2) + ' MPa'], ['fctm', f(bet.fctm, 2) + ' MPa'], ['fyd', f(ac.fyd, 1) + ' MPa']])}
       </fieldset>
       <fieldset><legend>Malha inferior</legend>
         ${row('', fld('Ø segundo X', 'materiais.armInf.x.phi', { opts: PHIS.map(x => [x, 'Ø' + x]), k: 'num' }), fld('Espaçamento X', 'materiais.armInf.x.s', { u: 'm' }))}
         ${row('', fld('Ø segundo Y', 'materiais.armInf.y.phi', { opts: PHIS.map(x => [x, 'Ø' + x]), k: 'num' }), fld('Espaçamento Y', 'materiais.armInf.y.s', { u: 'm' }))}
         ${row('', fld('Camada mais baixa', 'materiais.camadaInf', { opts: [['x', 'Varões segundo X'], ['y', 'Varões segundo Y']] }), fld('Secção de referência', 'materiais.seccaoRef', { opts: [['face', 'Face do pilar'], ['015', '0,15·c para o interior']] }))}
-        ${chk('Patilhas nas extremidades (amarração com α1 = 0,7)', 'materiais.patilhas')}
+        ${chk('Patilhas nas extremidades', 'materiais.patilhas', { hint: 'α1 = 0,7 se cd > 3φ (EC2 Quadro 8.2), senão 1,0.' })}
         <div id="liveInfo">${d ? info([['dx / dy', f(d.dx, 3) + ' / ' + f(d.dy, 3) + ' m'], ['As,x total', f(d.AsX, 2) + ' cm²'], ['As,y total', f(d.AsY, 2) + ' cm²'], ['ρx / ρy', f(d.rhoX * 100, 3) + ' / ' + f(d.rhoY * 100, 3) + ' %']]) : ''}</div>
       </fieldset>
       <fieldset><legend>Malha superior</legend>

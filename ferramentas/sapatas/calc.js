@@ -1151,7 +1151,7 @@
         for (const r of est) { const a = r.amarr && r.amarr[dir]; if (a && (!w || a.eta > w.a.eta)) w = { r, a }; }
         const lbl = dir === 'x' ? 'X' : 'Y';
         if (w) add({ id: 'amarr-' + dir, grupo: 'Estrutural', nome: `Amarração da armadura inferior segundo ${lbl}`, ref: 'EC2 9.8.2.2, 8.4', eta: w.a.eta, ok: w.a.eta <= 1, comb: w.r.comb,
-          val: w.a.lbd, lim: w.a.lav, un: 'mm', info: `Secção a x = ${fmt(w.a.x, 3)} m do bordo; Fs = ${fmt(w.a.Fs, 1)} kN; σsd = ${fmt(w.a.sig, 0)} MPa; ${m.patilhas ? 'com patilhas (α1 = 0,7)' : 'varões retos'}` });
+          val: w.a.lbd, lim: w.a.lav, un: 'mm', info: `Secção a x = ${fmt(w.a.x, 3)} m do bordo; Fs = ${fmt(w.a.Fs, 1)} kN; σsd = ${fmt(w.a.sig, 0)} MPa; ${m.patilhas ? `com patilhas (α1 = ${w.a.alfa1 === 0.7 ? '0,7' : '1,0'}: cd = ${fmt(w.a.cd, 0)} mm ${w.a.alfa1 === 0.7 ? '>' : '≤'} 3φ)` : 'varões retos (α1 = 1,0)'}` });
       }
     }
 
@@ -1285,6 +1285,10 @@
       const As = dir === 'x' ? dd.AsX : dd.AsY;
       const d = dir === 'x' ? dd.dx : dd.dy;
       const half = dir === 'x' ? geo.B / 2 : geo.L / 2;
+      // EC2 Quadro 8.2: α1 = 0,7 para varões dobrados só se cd > 3φ; cd = min(a/2; c) (Figura 8.3)
+      const sBar = (+(dir === 'x' ? m.armInf.x.s : m.armInf.y.s) || 0.2) * 1000;
+      const cd = Math.min((sBar - phi) / 2, +m.cnom || 50);
+      const alfa1 = hook && cd > 3 * phi ? 0.7 : 1.0;
       let pior = null;
       for (const lado of [1, -1]) {
         // face do pilar mais próxima deste bordo
@@ -1311,10 +1315,10 @@
           const zi = 0.9 * d;
           const Fs = Rr * ze / zi;
           const sig = Math.min(ac.fyd, Fs / (As * 1e-4) / 1000);
-          const am = amarracao(bet, phi, sig, hook ? 0.7 : 1, false);
+          const am = amarracao(bet, phi, sig, alfa1, false);
           const lav = (xd - (+m.cnom || 50) / 1000) * 1000 + (hook ? Math.max(0, (geo.h - 2 * (+m.cnom || 50) / 1000) * 1000 - phi) : 0);
           const eta = lav > 0 ? am.lbd / lav : Infinity;
-          if (!pior || eta > pior.eta) pior = { eta, x: xd, Fs, sig, lbd: am.lbd, lav, R: Rr, ze, zi, lado };
+          if (!pior || eta > pior.eta) pior = { eta, x: xd, Fs, sig, lbd: am.lbd, lav, R: Rr, ze, zi, lado, alfa1, cd };
         }
       }
       if (pior) res[dir] = pior;
