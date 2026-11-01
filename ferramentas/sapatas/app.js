@@ -100,7 +100,7 @@
   /* ---------------------------------------------------------------- menus */
   const STEPS = [
     { id: 'projeto', t: 'Projeto', d: 'Identificação da obra e da sapata para a memória de cálculo.', view: 'planta' },
-    { id: 'geometria', t: 'Geometria', d: 'Sapata centrada retangular. Dimensões em planta, altura e profundidade da base.', view: 'planta' },
+    { id: 'geometria', t: 'Geometria', d: 'Tipo de sapata, dimensões, pesos e sobrecarga.', view: 'planta' },
     { id: 'pilares', t: 'Pilares', d: 'Até 4 pilares retangulares ou circulares, com posição relativa ao centro da sapata.', view: 'planta' },
     { id: 'materiais', t: 'Materiais e armaduras', d: 'Betão, aço, recobrimento e malhas de armadura.', view: 'corte' },
     { id: 'terreno', t: 'Terreno', d: 'Camada única ou perfil multicamada, nível freático e parâmetros geotécnicos.', view: 'corte' },
@@ -131,7 +131,7 @@
     o = o || {};
     const id = idOf(path);
     const v = path.startsWith('ui_') ? ui[path] : get(S, path);
-    const unit = o.u ? `<span class="u">${o.u}</span>` : '';
+    const unit = '';
     const r = o.r ? ' data-r="1"' : '';
     let inp;
     if (o.opts) {
@@ -141,9 +141,11 @@
     } else if (o.k === 'str') {
       inp = `<input class="inp" id="${id}" data-p="${path}" data-k="str" value="${esc(v)}"${o.ph ? ` placeholder="${esc(o.ph)}"` : ''} autocomplete="off"${r}>`;
     } else {
-      inp = `<input class="inp n" id="${id}" data-p="${path}" data-k="num" value="${esc(showNum(v))}" inputmode="decimal" autocomplete="off"${r}>`;
+      inp = `<input class="inp n" id="${id}" data-p="${path}" data-k="num" value="${esc(showNum(v))}" inputmode="decimal" autocomplete="off"${r}${o.u ? ` style="padding-right:calc(14px + ${String(o.u).length}ch)"` : ''}>`;
+      if (o.u) inp = `<div class="inpw">${inp}<span class="un" aria-hidden="true">${o.u}</span></div>`;
     }
-    return `<div class="fld"><label for="${id}"><span>${label}</span>${unit}</label>${inp}${o.hint ? `<p class="hint">${o.hint}</p>` : ''}</div>`;
+    const lab = label ? `<label for="${id}"><span>${label}</span>${unit}</label>` : `<span></span>`;
+    return `<div class="fld">${lab}${inp}${o.hint ? `<p class="hint">${o.hint}</p>` : '<span></span>'}</div>`;
   }
   function chk(label, path, o) {
     o = o || {};
@@ -156,6 +158,28 @@
     return `<div class="seg" role="group">${opts.map(([val, t]) => `<button type="button" class="${String(v) === String(val) ? 'on' : ''}" data-seg="${path}" data-val="${esc(val)}">${esc(t)}</button>`).join('')}</div>`;
   }
   const row = (cls, ...xs) => `<div class="row ${cls || ''}">${xs.join('')}</div>`;
+  function infoGeometria() {
+    let g;
+    try { g = C.geometria(S); } catch (e) { return ''; }
+    return info([
+      ['Área da base', f(g.A, 3) + ' m²'],
+      ['Peso da sapata', f(g.Wsap, 1) + ' kN'],
+      ['Altura de aterro', f(g.hAt, 2) + ' m'],
+      ['Peso do aterro', f(g.Wat, 1) + ' kN'],
+      ['Balanço máximo', f(g.vMax, 3) + ' m'],
+      ['Classificação', g.vMax <= 2 * g.h ? 'rígida (v ≤ 2h)' : 'flexível (v > 2h)']
+    ]);
+  }
+  function infoArmaduras() {
+    const d = R ? R.d : null;
+    return d ? info([['dx / dy', f(d.dx, 3) + ' / ' + f(d.dy, 3) + ' m'], ['As,x total', f(d.AsX, 2) + ' cm²'], ['As,y total', f(d.AsY, 2) + ' cm²'], ['ρx / ρy', f(d.rhoX * 100, 3) + ' / ' + f(d.rhoY * 100, 3) + ' %']]) : '';
+  }
+  function atualizarInfo() {
+    const el = document.getElementById('liveInfo');
+    if (!el) return;
+    if (ui.step === 'geometria') el.innerHTML = infoGeometria();
+    else if (ui.step === 'materiais') el.innerHTML = infoArmaduras();
+  }
   const info = (pairs) => `<dl class="info">${pairs.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join('')}</dl>`;
 
   /* --------------------------------------------------------- painéis */
@@ -185,9 +209,8 @@
       <div class="note">Os dados ficam guardados neste browser. Use <b>Guardar</b> para criar um ficheiro JSON do cálculo e <b>Abrir</b> para o recuperar mais tarde ou partilhar com a equipa.</div>`;
     },
     geometria() {
-      const g = R ? R.geo : C.geometria(S);
       return `<fieldset><legend>Tipo de sapata</legend>
-        ${fld('Geometria', 'geometria.tipo', { opts: [['ret', 'Retangular centrada']], hint: 'Próximas geometrias: circular, excêntrica (vizinhança), de canto e sapatas associadas.' })}
+        ${fld('', 'geometria.tipo', { opts: [['ret', 'Retangular centrada']] })}
       </fieldset>
       <fieldset><legend>Dimensões</legend>
         ${row('', fld('B — dimensão segundo X', 'geometria.B', { u: 'm' }), fld('L — dimensão segundo Y', 'geometria.L', { u: 'm' }))}
@@ -198,14 +221,7 @@
         ${row('', fld('Sobrecarga à superfície', 'geometria.qSup', { u: 'kPa' }), fld('Tipo de sobrecarga', 'geometria.qSupTipo', { opts: [['Q', 'Variável'], ['G', 'Permanente']], r: true }))}
         ${S.geometria.qSupTipo === 'Q' ? row('r3', fld('ψ0', 'geometria.qSupPsi0'), fld('ψ1', 'geometria.qSupPsi1'), fld('ψ2', 'geometria.qSupPsi2')) : ''}
       </fieldset>
-      ${info([
-        ['Área da base', f(g.A, 3) + ' m²'],
-        ['Peso da sapata', f(g.Wsap, 1) + ' kN'],
-        ['Altura de aterro', f(g.hAt, 2) + ' m'],
-        ['Peso do aterro', f(g.Wat, 1) + ' kN'],
-        ['Balanço máximo', f(g.vMax, 3) + ' m'],
-        ['Classificação', g.vMax <= 2 * g.h ? 'rígida (v ≤ 2h)' : 'flexível (v > 2h)']
-      ])}`;
+      <div id="liveInfo">${infoGeometria()}</div>`;
     },
     pilares() {
       const cards = S.pilares.map((p, i) => `<div class="card">
@@ -240,7 +256,7 @@
         ${row('', fld('Ø segundo Y', 'materiais.armInf.y.phi', { opts: PHIS.map(x => [x, 'Ø' + x]), k: 'num' }), fld('Espaçamento Y', 'materiais.armInf.y.s', { u: 'm' }))}
         ${row('', fld('Camada mais baixa', 'materiais.camadaInf', { opts: [['x', 'Varões segundo X'], ['y', 'Varões segundo Y']] }), fld('Secção de referência', 'materiais.seccaoRef', { opts: [['face', 'Face do pilar'], ['015', '0,15·c para o interior']] }))}
         ${chk('Patilhas nas extremidades (amarração com α1 = 0,7)', 'materiais.patilhas')}
-        ${d ? info([['dx / dy', f(d.dx, 3) + ' / ' + f(d.dy, 3) + ' m'], ['As,x total', f(d.AsX, 2) + ' cm²'], ['As,y total', f(d.AsY, 2) + ' cm²'], ['ρx / ρy', f(d.rhoX * 100, 3) + ' / ' + f(d.rhoY * 100, 3) + ' %']]) : ''}
+        <div id="liveInfo">${d ? info([['dx / dy', f(d.dx, 3) + ' / ' + f(d.dy, 3) + ' m'], ['As,x total', f(d.AsX, 2) + ' cm²'], ['As,y total', f(d.AsY, 2) + ' cm²'], ['ρx / ρy', f(d.rhoX * 100, 3) + ' / ' + f(d.rhoY * 100, 3) + ' %']]) : ''}</div>
       </fieldset>
       <fieldset><legend>Malha superior</legend>
         ${chk('Considerar malha superior', 'materiais.armSup.ativa', { r: true })}
@@ -428,6 +444,7 @@
     }
     set(S, p, v);
     guardarLocal();
+    atualizarInfo();
     agendar();
   }
   function onChange(e) {
@@ -571,11 +588,8 @@
       ui.combId = gov && gov.comb ? gov.comb.id : (R.combos[0] && R.combos[0].id);
     }
     renderStatus(); renderSteps(); renderStage();
-    if (ui.step === 'resultados' || ui.step === 'geometria' || ui.step === 'materiais') {
-      const a = document.activeElement;
-      if (!(a && a.closest && a.closest('#panelBody') && a.tagName !== 'BUTTON')) renderPanel();
-      else if (ui.step === 'resultados') renderPanel();
-    }
+    if (ui.step === 'resultados') renderPanel();
+    else atualizarInfo();
   }
   function renderStatus() {
     const el = $('#statusPill');
