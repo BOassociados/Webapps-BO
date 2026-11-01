@@ -1160,19 +1160,39 @@
       const phiMin = 10; // AN – NA–9.8.2.1(1)
       const fmin = Math.min(fx, fy);
       add({ id: 'phimin', grupo: 'Pormenorização', nome: 'Diâmetro mínimo dos varões da malha inferior', ref: 'EC2 9.8.2.1 (AN: φmin = 10 mm)', eta: phiMin / fmin, ok: fmin >= phiMin, val: fmin, lim: phiMin, un: 'mm' });
-      const smax = +m.sMax || 0.30, smin = +m.sMin || 0.10;
-      const sM = Math.max(sxB, syB), sm = Math.min(sxB, syB);
-      add({ id: 'smax', grupo: 'Pormenorização', nome: 'Espaçamento máximo entre varões', ref: 'Critério do projetista (EC2 9.3.1.1)', eta: sM / smax, ok: sM <= smax + 1e-9, val: sM * 100, lim: smax * 100, un: 'cm' });
-      const sminEC2 = Math.max(Math.max(fx, fy), (+m.dg || 20) + 5, 20) / 1000 + Math.max(fx, fy) / 1000;
-      const smin2 = Math.max(smin, sminEC2);
-      add({ id: 'smin', grupo: 'Pormenorização', nome: 'Espaçamento mínimo entre varões', ref: 'EC2 8.2 + critério do projetista', eta: sm > 0 ? smin2 / sm : Infinity, ok: sm >= smin2 - 1e-9, val: sm * 100, lim: smin2 * 100, un: 'cm' });
-      // arranques dos pilares
+      // espaçamentos pelo EC2 (malhas inferior e, se existir, superior)
+      const sMaxGeral = Math.min(3 * geo.h, 0.40);          // 9.3.1.1(3): 3h ≤ 400 mm
+      const sMaxEC2 = Math.min(2 * geo.h, 0.25);            // zona de momento máximo: 2h ≤ 250 mm
+      const livreMin = (phi) => Math.max(phi, (+m.dg || 20) + 5, 20) / 1000;   // 8.2(2): k1·φ; dg + k2; 20 mm
+      R.espac = { sMaxGeral, sMaxEC2, livreMin: livreMin(Math.max(fx, fy)), sMinX: livreMin(fx) + fx / 1000, sMinY: livreMin(fy) + fy / 1000 };
+      const malhas = [['inferior X', fx, sxB], ['inferior Y', fy, syB]];
+      if (sup) malhas.push(['superior X', +m.armSup.x.phi, +m.armSup.x.s], ['superior Y', +m.armSup.y.phi, +m.armSup.y.s]);
+      let wM = null, wm = null;
+      for (const [nm, ph, s] of malhas) {
+        const smin = livreMin(ph) + ph / 1000;
+        if (!wM || s / sMaxEC2 > wM.eta) wM = { nm, s, eta: s / sMaxEC2 };
+        if (!wm || smin / s > wm.eta) wm = { nm, s, smin, ph, eta: s > 0 ? smin / s : Infinity };
+      }
+      add({ id: 'smax', grupo: 'Pormenorização', nome: 'Espaçamento máximo entre varões', ref: 'EC2 9.3.1.1(3): 2h ≤ 250 mm na zona de momento máximo', eta: wM.eta, ok: wM.eta <= 1 + 1e-9, val: wM.s * 100, lim: sMaxEC2 * 100, un: 'cm',
+        info: `Malha ${wM.nm}. Fora da zona de momento máximo o limite seria min(3h; 400 mm) = ${fmt(sMaxGeral * 1000, 0)} mm.` });
+      add({ id: 'smin', grupo: 'Pormenorização', nome: 'Espaçamento mínimo entre varões', ref: 'EC2 8.2(2): livre ≥ máx(φ; dg + 5 mm; 20 mm)', eta: wm.eta, ok: wm.eta <= 1 + 1e-9, val: wm.s * 100, lim: wm.smin * 100, un: 'cm',
+        info: `Malha ${wm.nm}: espaçamento livre mínimo ${fmt((wm.smin - wm.ph / 1000) * 1000, 0)} mm + φ${wm.ph}.` });
+      // arranques dos pilares (EC2 8.4): compressão só com troço reto; tração com dobra (lb,eq)
       for (const p of geo.pil) {
         const sig = (+m.sigArr || 1) * ac.fyd;
-        const am = amarracao(bet, p.phi, sig, 1, true);
-        const disp = (geo.h - cn - (fx + fy) / 1000) * 1000;
-        add({ id: 'arr-' + p.id, grupo: 'Pormenorização', nome: `Amarração dos arranques do pilar ${p.id} (Ø${p.phi})`, ref: 'EC2 8.4.4 (compressão)', eta: am.lbd / disp, ok: am.lbd <= disp, val: am.lbd, lim: disp, un: 'mm', aviso: true,
-          info: `lb,rqd = ${fmt(am.lbrqd, 0)} mm com σsd = ${fmt(sig, 0)} MPa; lb,min = ${fmt(am.lbmin, 0)} mm. Altura disponível = h − c − Øx − Øy.` });
+        const ac_ = amarracao(bet, p.phi, sig, 1, true);
+        const disp = (geo.h - cn - (fx + fy) / 1000) * 1000;   // troço vertical disponível
+        add({ id: 'arr-' + p.id, grupo: 'Pormenorização', nome: `Arranques do pilar ${p.id} (Ø${p.phi}) — compressão`, ref: 'EC2 8.4.1(2), 8.4.4 (só troço reto)', eta: ac_.lbd / disp, ok: ac_.lbd <= disp, val: ac_.lbd, lim: disp, un: 'mm', aviso: true,
+          info: `lbd = ${fmt(ac_.lbd, 0)} mm (lb,rqd = ${fmt(ac_.lbrqd, 0)} mm, σsd = ${fmt(sig, 0)} MPa; lb,min = ${fmt(ac_.lbmin, 0)} mm). Troço vertical disponível = h − c − Øx − Øy = ${fmt(disp, 0)} mm. As dobras não contam em compressão: se não chegar, aumentar h ou reduzir o diâmetro.` });
+        // tração: varão dobrado (α1 = 0,7 se cd > 3φ; nos arranques cd = recobrimento lateral na sapata, em geral > 3φ)
+        const cdA = Math.min(cn * 1000, 1e9);
+        const a1 = cdA > 3 * p.phi ? 0.7 : 1.0;
+        const at = amarracao(bet, p.phi, sig, a1, false);
+        const pat = Math.max(0, at.lbd - disp);
+        const patR = pat > 0 ? Math.ceil(Math.max(pat, 5 * p.phi) / 50) * 50 : 0;
+        add({ id: 'arrT-' + p.id, grupo: 'Pormenorização', nome: `Arranques do pilar ${p.id} (Ø${p.phi}) — tração, patilha`, ref: 'EC2 8.4.4(2), Quadro 8.2 (lb,eq = α1·lb,rqd)', eta: disp > 0 ? Math.min(1, at.lbd / (disp + patR || 1)) : Infinity, ok: true,
+          info: pat > 0 ? `lb,eq = ${fmt(at.lbd, 0)} mm (α1 = ${a1 === 0.7 ? '0,7' : '1,0'}) > troço vertical ${fmt(disp, 0)} mm → dobrar ${fmt(patR, 0)} mm para os lados sobre a malha inferior (${fmt(pat, 0)} mm calculados, arredondado a 50 mm).`
+            : `lb,eq = ${fmt(at.lbd, 0)} mm ≤ troço vertical ${fmt(disp, 0)} mm: basta o troço reto (patilha construtiva para apoio na malha).` });
       }
       const rig = geo.vMax <= 2 * geo.h;
       R.rigida = rig;

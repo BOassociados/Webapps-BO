@@ -28,7 +28,7 @@
       projeto: { obra: '', cliente: '', local: '', ref: '', autor: '', verificador: '', data: '', notas: '' },
       geometria: { tipo: 'ret', B: 2.1, L: 2.1, h: 0.5, Df: 1.0, gammaC: 25, gammaAterro: 18, qSup: 0, qSupTipo: 'Q', qSupPsi0: 0.7, qSupPsi1: 0.5, qSupPsi2: 0.3 },
       pilares: [{ id: 'P1', forma: 'ret', cx: 0.4, cy: 0.4, D: 0.4, x: 0, y: 0, phi: 16 }],
-      materiais: { betao: 'C30/37', aco: 'A500', cnom: 50, dg: 20, armInf: { x: { phi: 16, s: 0.2 }, y: { phi: 16, s: 0.2 } }, armSup: { ativa: false, x: { phi: 12, s: 0.2 }, y: { phi: 12, s: 0.2 } }, camadaInf: 'x', patilhas: true, seccaoRef: 'face', sMax: 0.3, sMin: 0.1, sigArr: 1 },
+      materiais: { betao: 'C30/37', aco: 'A500', cnom: 50, dg: 20, armInf: { x: { phi: 16, s: 0.2 }, y: { phi: 16, s: 0.2 } }, armSup: { ativa: false, x: { phi: 12, s: 0.2 }, y: { phi: 12, s: 0.2 } }, camadaInf: 'x', patilhas: true, seccaoRef: '015', sigArr: 1 },
       terreno: {
         modo: 'multi',
         camadas: [
@@ -179,7 +179,13 @@
     const d = R ? R.d : null;
     return d ? info([['dx / dy', f(d.dx, 3) + ' / ' + f(d.dy, 3) + ' m'], ['As,x total', f(d.AsX, 2) + ' cm²'], ['As,y total', f(d.AsY, 2) + ' cm²'], ['ρx / ρy', f(d.rhoX * 100, 3) + ' / ' + f(d.rhoY * 100, 3) + ' %']]) : '';
   }
+  function infoEspac() {
+    const e = R && R.espac;
+    return e ? info([['s,máx (EC2 9.3.1.1(3), 2h ≤ 250 mm)', f(e.sMaxEC2 * 1000, 0) + ' mm'], ['s,mín X / Y (EC2 8.2(2))', f(e.sMinX * 1000, 0) + ' / ' + f(e.sMinY * 1000, 0) + ' mm']]) : '';
+  }
   function atualizarInfo() {
+    const e2 = document.getElementById('liveInfo2');
+    if (e2) e2.innerHTML = infoEspac();
     const el = document.getElementById('liveInfo');
     if (!el) return;
     if (ui.step === 'geometria') el.innerHTML = infoGeometria();
@@ -261,7 +267,7 @@
       <fieldset><legend>Malha inferior</legend>
         ${row('', fld('Ø segundo X', 'materiais.armInf.x.phi', { opts: PHIS.map(x => [x, 'Ø' + x]), k: 'num' }), fld('Espaçamento X', 'materiais.armInf.x.s', { u: 'm' }))}
         ${row('', fld('Ø segundo Y', 'materiais.armInf.y.phi', { opts: PHIS.map(x => [x, 'Ø' + x]), k: 'num' }), fld('Espaçamento Y', 'materiais.armInf.y.s', { u: 'm' }))}
-        ${row('', fld('Camada mais baixa', 'materiais.camadaInf', { opts: [['x', 'Varões segundo X'], ['y', 'Varões segundo Y']] }), fld('Secção de referência', 'materiais.seccaoRef', { opts: [['face', 'Face do pilar'], ['015', '0,15·c para o interior']] }))}
+        ${row('', fld('Camada mais baixa', 'materiais.camadaInf', { opts: [['x', 'Varões segundo X'], ['y', 'Varões segundo Y']] }), fld('Secção de referência', 'materiais.seccaoRef', { opts: [['015', '0,15·c para o interior'], ['face', 'Face do pilar']] }))}
         ${chk('Patilhas nas extremidades', 'materiais.patilhas', { hint: 'α1 = 0,7 se cd > 3φ (EC2 Quadro 8.2), senão 1,0.' })}
         <div id="liveInfo">${d ? info([['dx / dy', f(d.dx, 3) + ' / ' + f(d.dy, 3) + ' m'], ['As,x total', f(d.AsX, 2) + ' cm²'], ['As,y total', f(d.AsY, 2) + ' cm²'], ['ρx / ρy', f(d.rhoX * 100, 3) + ' / ' + f(d.rhoY * 100, 3) + ' %']]) : ''}</div>
       </fieldset>
@@ -271,8 +277,8 @@
           row('', fld('Ø segundo Y', 'materiais.armSup.y.phi', { opts: PHIS.map(x => [x, 'Ø' + x]), k: 'num' }), fld('Espaçamento Y', 'materiais.armSup.y.s', { u: 'm' })) : ''}
       </fieldset>
       <fieldset><legend>Critérios de pormenorização</legend>
-        ${row('', fld('Espaçamento máximo', 'materiais.sMax', { u: 'm' }), fld('Espaçamento mínimo', 'materiais.sMin', { u: 'm' }))}
-        ${fld('σsd / fyd nos arranques do pilar', 'materiais.sigArr', { hint: '1,0 = arranques totalmente mobilizados (conservativo). Pode usar As,req/As,prov do pilar.' })}
+        <div id="liveInfo2">${infoEspac()}</div>
+        ${fld('Aproveitamento dos arranques do pilar (As,req / As,prov)', 'materiais.sigArr', { hint: '1,0 = varões do pilar à tensão de cálculo (conservativo). O comprimento de amarração é proporcional a este valor (EC2 8.4.3).' })}
       </fieldset>`;
     },
     terreno() {
@@ -1070,7 +1076,7 @@ vEd = ${f(cp.val, 3)} MPa ≤ vRd = ${f(cp.lim, 3)} MPa  →  η = ${f(cp.eta, 3
       H.push(`<p><b>Amarração ${dir.toUpperCase()} (9.8.2.2):</b> Fs = R·ze/zi; ${esc(c.info)}; lbd = ${f(c.val, 0)} mm ≤ disponível ${f(c.lim, 0)} mm → ${okTxt(c)}</p>`);
     }
     H.push(`<h3>8.${k8++} Disposições construtivas</h3><table><tr><th>Verificação</th><th>Valor</th><th>Limite</th><th>Estado</th></tr>
-      ${['phimin', 'smax', 'smin', ...g.pil.map(q => 'arr-' + q.id)].map(chk).filter(Boolean).map(c => `<tr><td>${esc(c.nome)}<br><small>${esc(c.info || c.ref)}</small></td><td class="mono">${fmtVal(c.val, c.un)}</td><td class="mono">${fmtVal(c.lim, c.un)}</td><td>${okTxt(c)}</td></tr>`).join('')}</table>`);
+      ${['phimin', 'smax', 'smin', ...g.pil.flatMap(q => ['arr-' + q.id, 'arrT-' + q.id])].map(chk).filter(Boolean).map(c => `<tr><td>${esc(c.nome)}<br><small>${esc(c.info || c.ref)}</small></td><td class="mono">${fmtVal(c.val, c.un)}</td><td class="mono">${fmtVal(c.lim, c.un)}</td><td>${okTxt(c)}</td></tr>`).join('')}</table>`);
 
     if (R.avisos.length) H.push(`<h2>9. Avisos</h2><ul>${R.avisos.map(a => `<li>${esc(a)}</li>`).join('')}</ul>`);
     H.push(`<div class="disc">Memória gerada pela ferramenta “Sapatas” (Webapps-BO, v0.1) em ${new Date().toLocaleString('pt-PT')}. Este software é uma ferramenta auxiliar de cálculo e não substitui a validação técnica e o julgamento profissional de um engenheiro qualificado. O utilizador assume total responsabilidade pelo uso e verificação independente dos resultados.</div></div>`);
