@@ -32,7 +32,7 @@
       terreno: {
         modo: 'unica',
         camadas: [
-          { nome: 'Areia siltosa', esp: 4, gamma: 18, gammaSat: 18, phi: 28, c: 0, cu: 0, E: 8, nu: 0.3, sigAdm: 200, spt: 20 },
+          { nome: 'Areia siltosa', esp: 4, gamma: 18, gammaSat: 18, phi: 28, c: 0, cu: 0, E: 20, nu: 0.3, sigAdm: 200, spt: 20 },
           { nome: 'Saibro (granito alterado)', esp: 0, gamma: 20, gammaSat: 21, phi: 36, c: 10, cu: 0, E: 80, nu: 0.25, sigAdm: 400, spt: 60 }
         ],
         nf: { considerar: true, prof: 2.0 }
