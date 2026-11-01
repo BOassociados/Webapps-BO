@@ -837,6 +837,12 @@
       if (Math.abs(p.x) + p.cx / 2 > geo.B / 2 + 1e-9 || Math.abs(p.y) + p.cy / 2 > geo.L / 2 + 1e-9) avisos.push(`O pilar ${p.id} sai fora da planta da sapata.`);
     }
     if (!combos.length) avisos.push('Não há combinações de ações: introduza ações no menu Ações.');
+    // coerência dos dados do terreno: γsat ≥ γ
+    {
+      const bad = camadasLista(st).filter(L => (+L.c.gammaSat || 0) < (+L.c.gamma || 0));
+      if (bad.length) R.checks.push({ id: 'dados-gama', grupo: 'Dados', nome: 'Peso volúmico saturado ≥ peso volúmico (γsat ≥ γ)', ref: 'Dados do terreno', eta: Infinity, ok: false, comb: null,
+        info: 'Corrigir no menu Terreno: ' + bad.map(L => `"${L.c.nome}" (γ = ${fmt(+L.c.gamma, 1)}; γsat = ${fmt(+L.c.gammaSat, 1)} kN/m³)`).join('; ') + '.' });
+    }
     if (geo.dw < geo.Df) avisos.push('Nível freático acima da base da sapata: considerada a impulsão (subpressão) na base.');
 
     const usaDren = (geo => { const c = camadaEm(st, geo.Df + 1e-6).c; return (+c.phi || 0) > 0 || (+c.c || 0) > 0; })(geo);

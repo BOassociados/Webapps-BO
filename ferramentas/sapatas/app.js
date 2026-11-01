@@ -30,10 +30,9 @@
       pilares: [{ id: 'P1', forma: 'ret', cx: 0.4, cy: 0.4, D: 0.4, x: 0, y: 0, phi: 16 }],
       materiais: { betao: 'C30/37', aco: 'A500', cnom: 50, dg: 20, armInf: { x: { phi: 16, s: 0.2 }, y: { phi: 16, s: 0.2 } }, armSup: { ativa: false, x: { phi: 12, s: 0.2 }, y: { phi: 12, s: 0.2 } }, camadaInf: 'x', patilhas: true, seccaoRef: '015', sigArr: 1 },
       terreno: {
-        modo: 'multi',
+        modo: 'unica',
         camadas: [
-          { nome: 'Aterro', esp: 0.8, gamma: 18, gammaSat: 19, phi: 28, c: 0, cu: 0, E: 8, nu: 0.3, sigAdm: 100, spt: 6 },
-          { nome: 'Areia siltosa', esp: 4, gamma: 19, gammaSat: 20, phi: 32, c: 0, cu: 0, E: 25, nu: 0.3, sigAdm: 250, spt: 22 },
+          { nome: 'Areia siltosa', esp: 4, gamma: 18, gammaSat: 18, phi: 28, c: 0, cu: 0, E: 8, nu: 0.3, sigAdm: 200, spt: 20 },
           { nome: 'Saibro (granito alterado)', esp: 0, gamma: 20, gammaSat: 21, phi: 36, c: 10, cu: 0, E: 80, nu: 0.25, sigAdm: 400, spt: 60 }
         ],
         nf: { considerar: true, prof: 2.0 }
@@ -163,6 +162,16 @@
     return `<div class="seg" role="group">${opts.map(([val, t]) => `<button type="button" class="${String(v) === String(val) ? 'on' : ''}" data-seg="${path}" data-val="${esc(val)}">${esc(t)}</button>`).join('')}</div>`;
   }
   const row = (cls, ...xs) => `<div class="row ${cls || ''}">${xs.join('')}</div>`;
+  const gamaErro = (c) => (+c.gammaSat || 0) < (+c.gamma || 0);
+  const MSG_GAMA = 'Erro: γsat tem de ser igual ou maior que γ.';
+  function validarGama(i) {
+    const c = S.terreno.camadas[i]; if (!c) return;
+    const bad = gamaErro(c);
+    const el = document.getElementById(idOf(`terreno.camadas.${i}.gammaSat`));
+    if (el) el.classList.toggle('bad', bad);
+    const msg = document.getElementById('gamaErr_' + i);
+    if (msg) msg.hidden = !bad;
+  }
   function infoGeometria() {
     let g;
     try { g = C.geometria(S); } catch (e) { return ''; }
@@ -287,6 +296,7 @@
         <div class="card-head"><span class="ttl">${unica ? 'Terreno de fundação' : 'Camada ' + (i + 1)}</span>${!unica && S.terreno.camadas.length > 1 ? `<button class="btn small danger" type="button" data-act="delCam" data-i="${i}">Remover</button>` : ''}</div>
         ${row('', fld('Designação', `terreno.camadas.${i}.nome`, { k: 'str' }), unica ? fld('NSPT médio', `terreno.camadas.${i}.spt`, { hint: 'Informativo.' }) : fld('Espessura', `terreno.camadas.${i}.esp`, { u: 'm', hint: i === S.terreno.camadas.length - 1 ? 'Última camada: 0 = até ao fim.' : '' }))}
         ${row('', fld('γ', `terreno.camadas.${i}.gamma`, { u: 'kN/m³' }), fld('γsat', `terreno.camadas.${i}.gammaSat`, { u: 'kN/m³' }))}
+        <div class="note err" id="gamaErr_${i}" role="alert" ${gamaErro(c) ? '' : 'hidden'}>${MSG_GAMA}</div>
         ${row('r3', fld("φ'", `terreno.camadas.${i}.phi`, { u: '°' }), fld("c'", `terreno.camadas.${i}.c`, { u: 'kPa' }), fld('cu', `terreno.camadas.${i}.cu`, { u: 'kPa' }))}
         ${row('r3', fld('E', `terreno.camadas.${i}.E`, { u: 'MPa' }), fld('ν', `terreno.camadas.${i}.nu`), fld('σadm', `terreno.camadas.${i}.sigAdm`, { u: 'kPa' }))}
         ${!unica ? fld('NSPT médio', `terreno.camadas.${i}.spt`, { hint: 'Informativo (relatório geotécnico).' }) : ''}
@@ -391,7 +401,7 @@
   function painelResultados() {
     if (calcErro) return `<div class="note warn">Erro no cálculo: ${esc(calcErro)}</div>`;
     if (!R) return '<p>A calcular…</p>';
-    const grupos = ['Geotecnia', 'ELS', 'Estrutural', 'Pormenorização'];
+    const grupos = ['Dados', 'Geotecnia', 'ELS', 'Estrutural', 'Pormenorização'];
     const falhas = R.checks.filter(c => !c.ok && !c.aviso);
     let h = `<div class="summary ${R.ok ? 'ok' : 'bad'}"><span class="big">${R.ok ? 'Verifica' : 'Não verifica'}</span>
       <span class="sub">${R.checks.length} verificações · ${R.combos.length} combinações · η máx = ${f(R.etaMax, 2)}${falhas.length ? ' · ' + falhas.length + ' falha(s)' : ''}</span></div>`;
@@ -457,6 +467,8 @@
     }
     set(S, p, v);
     guardarLocal();
+    const mg = p.match(/^terreno\.camadas\.(\d+)\.gamma/);
+    if (mg) validarGama(+mg[1]);
     atualizarInfo();
     agendar();
   }
