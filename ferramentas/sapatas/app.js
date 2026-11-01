@@ -89,7 +89,11 @@
   let saveT = 0;
   function guardarLocal() { clearTimeout(saveT); saveT = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* ignorar */ } }, 300); }
 
-  let S = carregar() || normalizar(exemplo());
+  // Ao abrir começa sempre pelo exemplo base (1 pilar 0,40 × 0,40 centrado).
+  // O último cálculo guardado neste browser pode ser retomado no menu Projeto.
+  let anterior = carregar();
+  let S = normalizar(exemplo());
+  if (anterior && JSON.stringify(anterior) === JSON.stringify(S)) anterior = null;
   let R = null;
   let calcErro = null;
   const ui = { step: 'geometria', view: 'planta', combId: null, check: null, novoArm: 0, ui_ax: '1', ui_ay: '1', ui_relComb: false };
@@ -206,7 +210,8 @@
         ${row('', fld('Autor', 'projeto.autor', { k: 'str' }), fld('Verificado por', 'projeto.verificador', { k: 'str' }))}
         ${fld('Notas', 'projeto.notas', { area: true, ph: 'Observações a incluir na memória de cálculo' })}
       </fieldset>
-      <div class="note">Os dados ficam guardados neste browser. Use <b>Guardar</b> para criar um ficheiro JSON do cálculo e <b>Abrir</b> para o recuperar mais tarde ou partilhar com a equipa.</div>`;
+      ${anterior ? `<div class="note">Há um cálculo anterior guardado neste browser${anterior.projeto && anterior.projeto.obra ? ` (<b>${esc(anterior.projeto.obra)}</b>)` : ''}.<div style="margin-top:8px"><button class="btn small" type="button" data-act="retomar">Retomar o último cálculo</button></div></div>` : ''}
+      <div class="note">A aplicação abre sempre com os valores base. Use <b>Guardar</b> para criar um ficheiro JSON do cálculo e <b>Abrir</b> para o recuperar mais tarde ou partilhar com a equipa.</div>`;
     },
     geometria() {
       return `<fieldset><legend>Tipo de sapata</legend>
@@ -492,7 +497,8 @@
     delLinha(i) { S.cargas.comb.linhas.splice(i, 1); },
     limparLinhas() { S.cargas.comb.linhas = []; },
     colar() { colarTabela(); return false; },
-    relatorio() { abrirRelatorio(); return false; }
+    relatorio() { abrirRelatorio(); return false; },
+    retomar() { if (anterior) { S = anterior; anterior = null; ui.check = null; ui.combId = null; recalcular(); } }
   };
   function distribuir(n) {
     const ax = parseNum(ui.ui_ax !== undefined ? ui.ui_ax : '1') || 1;
