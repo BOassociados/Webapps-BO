@@ -32,8 +32,8 @@
       terreno: {
         modo: 'unica',
         camadas: [
-          { nome: 'Areia siltosa', esp: 4, gamma: 18, gammaSat: 18, phi: 28, c: 0, cu: 0, E: 20, nu: 0.3, sigAdm: 200, spt: 20 },
-          { nome: 'Saibro (granito alterado)', esp: 0, gamma: 20, gammaSat: 21, phi: 36, c: 10, cu: 0, E: 80, nu: 0.25, sigAdm: 400, spt: 60 }
+          { nome: 'Areia siltosa', comport: 'drenado', esp: 4, gamma: 18, gammaSat: 18, phi: 28, c: 0, cu: 0, E: 20, nu: 0.3, sigAdm: 200, spt: 20 },
+          { nome: 'Saibro (granito alterado)', comport: 'drenado', esp: 0, gamma: 20, gammaSat: 21, phi: 36, c: 10, cu: 0, E: 80, nu: 0.25, sigAdm: 400, spt: 60 }
         ],
         nf: { considerar: true, prof: 2.0 }
       },
@@ -59,7 +59,7 @@
       { id: 'a2', nome: 'Q', tipo: 'Q', cat: 'A', psi0: 0.7, psi1: 0.5, psi2: 0.3, val: { P1: { N: 0, Mx: 0, My: 0, Vx: 0, Vy: 0 } } }
     ];
     e.terreno.modo = 'unica';
-    e.terreno.camadas = [{ nome: 'Terreno de fundação', esp: 0, gamma: 19, gammaSat: 20, phi: 30, c: 0, cu: 0, E: 20, nu: 0.3, sigAdm: 200, spt: 0 }];
+    e.terreno.camadas = [{ nome: 'Terreno de fundação', comport: 'drenado', esp: 0, gamma: 19, gammaSat: 20, phi: 30, c: 0, cu: 0, E: 20, nu: 0.3, sigAdm: 200, spt: 0 }];
     e.terreno.nf = { considerar: false, prof: 5 };
     return e;
   }
@@ -80,6 +80,7 @@
       for (const p of s.pilares) a.val[p.id] = Object.assign({ N: 0, Mx: 0, My: 0, Vx: 0, Vy: 0 }, a.val[p.id] || {});
     }
     if (!s.terreno.camadas.length) s.terreno.camadas = vazio().terreno.camadas;
+    for (const c of s.terreno.camadas) if (c.comport !== 'drenado' && c.comport !== 'naodrenado') c.comport = (+c.cu || 0) > 0 ? 'naodrenado' : 'drenado';
     for (const m of [s.materiais.armInf.x, s.materiais.armInf.y, s.materiais.armSup.x, s.materiais.armSup.y, ...s.pilares]) if (+m.phi < 10) m.phi = 10;
     if (s.projeto.obra === 'Exemplo — edifício de habitação') { s.projeto.obra = ''; if (s.projeto.local === 'Braga') s.projeto.local = ''; }
     if (s.projeto.notas === 'Valores de exemplo: substituir pelos dados da obra.') { s.projeto.notas = ''; if (s.projeto.ref === 'S1') s.projeto.ref = ''; s.projeto.data = ''; }
@@ -162,7 +163,7 @@
     return `<div class="seg" role="group">${opts.map(([val, t]) => `<button type="button" class="${String(v) === String(val) ? 'on' : ''}" data-seg="${path}" data-val="${esc(val)}">${esc(t)}</button>`).join('')}</div>`;
   }
   const row = (cls, ...xs) => `<div class="row ${cls || ''}">${xs.join('')}</div>`;
-  const gamaErro = (c) => (+c.gammaSat || 0) < (+c.gamma || 0);
+  const gamaErro = (c) => !!(S.terreno.nf && S.terreno.nf.considerar) && (+c.gammaSat || 0) < (+c.gamma || 0);
   const MSG_GAMA = 'Erro: γsat tem de ser igual ou maior que γ.';
   function validarGama(i) {
     const c = S.terreno.camadas[i]; if (!c) return;
@@ -292,19 +293,28 @@
     },
     terreno() {
       const unica = S.terreno.modo === 'unica';
-      const cams = (unica ? [S.terreno.camadas[0]] : S.terreno.camadas).map((c, i) => `<div class="card">
+      const comNF = !!S.terreno.nf.considerar;
+      const comOed = S.analise.metodoAss === 'oed';
+      const semAss = S.analise.usarAssent === false, semSA = S.analise.usarSigAdm === false;
+      const cams = (unica ? [S.terreno.camadas[0]] : S.terreno.camadas).map((c, i) => {
+        const nd = c.comport === 'naodrenado';
+        return `<div class="card">
         <div class="card-head"><span class="ttl">${unica ? 'Terreno de fundação' : 'Camada ' + (i + 1)}</span>${!unica && S.terreno.camadas.length > 1 ? `<button class="btn small danger" type="button" data-act="delCam" data-i="${i}">Remover</button>` : ''}</div>
-        ${row('', fld('Designação', `terreno.camadas.${i}.nome`, { k: 'str' }), unica ? fld('NSPT médio', `terreno.camadas.${i}.spt`, { hint: 'Informativo.' }) : fld('Espessura', `terreno.camadas.${i}.esp`, { u: 'm', hint: i === S.terreno.camadas.length - 1 ? 'Última camada: 0 = até ao fim.' : '' }))}
-        ${row('', fld('γ', `terreno.camadas.${i}.gamma`, { u: 'kN/m³' }), fld('γsat', `terreno.camadas.${i}.gammaSat`, { u: 'kN/m³' }))}
+        ${unica ? fld('Designação', `terreno.camadas.${i}.nome`, { k: 'str' }) : row('', fld('Designação', `terreno.camadas.${i}.nome`, { k: 'str' }), fld('Espessura', `terreno.camadas.${i}.esp`, { u: 'm', hint: i === S.terreno.camadas.length - 1 ? 'Última camada: 0 = até ao fim.' : '' }))}
+        ${fld('Comportamento', `terreno.camadas.${i}.comport`, { opts: [['drenado', 'Drenado'], ['naodrenado', 'Não drenado']], r: true,
+          hint: nd ? 'Solos finos (argilas, siltes argilosos, lodos): verifica a curto prazo, não drenado (cu), e a longo prazo, drenado (φ\', c\'), como exige o EC7 6.5.2.2(2).' : 'Solos granulares (areias, saibros, cascalheiras): verificação drenada (φ\', c\').' })}
+        ${comNF ? row('', fld('γ', `terreno.camadas.${i}.gamma`, { u: 'kN/m³' }), fld('γsat', `terreno.camadas.${i}.gammaSat`, { u: 'kN/m³' })) : fld('γ', `terreno.camadas.${i}.gamma`, { u: 'kN/m³' })}
         <div class="note err" id="gamaErr_${i}" role="alert" ${gamaErro(c) ? '' : 'hidden'}>${MSG_GAMA}</div>
-        ${row('r3', fld("φ'", `terreno.camadas.${i}.phi`, { u: '°' }), fld("c'", `terreno.camadas.${i}.c`, { u: 'kPa' }), fld('cu', `terreno.camadas.${i}.cu`, { u: 'kPa' }))}
-        ${row('r3', fld('E', `terreno.camadas.${i}.E`, { u: 'MPa' }), fld('ν', `terreno.camadas.${i}.nu`), fld('σadm', `terreno.camadas.${i}.sigAdm`, { u: 'kPa' }))}
-        ${!unica ? fld('NSPT médio', `terreno.camadas.${i}.spt`, { hint: 'Informativo (relatório geotécnico).' }) : ''}
-      </div>`).join('');
+        ${nd ? row('r3', fld("φ'", `terreno.camadas.${i}.phi`, { u: '°' }), fld("c'", `terreno.camadas.${i}.c`, { u: 'kPa' }), fld('cu', `terreno.camadas.${i}.cu`, { u: 'kPa' }))
+             : row('', fld("φ'", `terreno.camadas.${i}.phi`, { u: '°' }), fld("c'", `terreno.camadas.${i}.c`, { u: 'kPa' }))}
+        ${row(comOed ? 'r3' : '', fld('σadm', `terreno.camadas.${i}.sigAdm`, { u: 'kPa', hint: semSA ? 'Não usado nesta análise.' : '' }), fld('E', `terreno.camadas.${i}.E`, { u: 'MPa', hint: semAss ? 'Não usado nesta análise.' : '' }), comOed ? fld('ν', `terreno.camadas.${i}.nu`) : '')}
+        ${fld('NSPT médio', `terreno.camadas.${i}.spt`, { hint: 'Opcional: por agora só informativo (aparece na memória de cálculo).' })}
+      </div>`;
+      }).join('');
       return `<fieldset><legend>Perfil</legend>${seg('terreno.modo', [['unica', 'Camada única'], ['multi', 'Multicamada']])}</fieldset>
       ${cams}
       ${!unica ? `<button class="btn" type="button" data-act="addCam">+ Adicionar camada</button>` : ''}
-      <p class="hint">cu = 0 dispensa a verificação não drenada; φ' = c' = 0 dispensa a drenada. A σadm usada é a da camada onde assenta a base.</p>
+      <p class="hint">A σadm e o comportamento usados nas verificações são os da camada onde assenta a base.</p>
       <fieldset><legend>Nível freático</legend>
         ${chk('Considerar nível freático', 'terreno.nf.considerar', { r: true })}
         ${S.terreno.nf.considerar ? fld('Profundidade abaixo do terreno final', 'terreno.nf.prof', { u: 'm' }) : ''}
@@ -509,7 +519,7 @@
     centrar() { if (S.pilares.length === 1) { S.pilares[0].x = 0; S.pilares[0].y = 0; } },
     grid2() { distribuir(2); },
     grid4() { distribuir(4); },
-    addCam() { S.terreno.camadas.push({ nome: 'Camada ' + (S.terreno.camadas.length + 1), esp: 0, gamma: 19, gammaSat: 20, phi: 30, c: 0, cu: 0, E: 30, nu: 0.3, sigAdm: 250, spt: 0 }); const n = S.terreno.camadas.length; if (+S.terreno.camadas[n - 2].esp <= 0) S.terreno.camadas[n - 2].esp = 2; },
+    addCam() { S.terreno.camadas.push({ nome: 'Camada ' + (S.terreno.camadas.length + 1), comport: 'drenado', esp: 0, gamma: 19, gammaSat: 20, phi: 30, c: 0, cu: 0, E: 30, nu: 0.3, sigAdm: 250, spt: 0 }); const n = S.terreno.camadas.length; if (+S.terreno.camadas[n - 2].esp <= 0) S.terreno.camadas[n - 2].esp = 2; },
     delCam(i) { S.terreno.camadas.splice(i, 1); },
     addAcao() { const id = 'a' + Date.now().toString(36); const val = {}; for (const p of S.pilares) val[p.id] = { N: 0, Mx: 0, My: 0, Vx: 0, Vy: 0 }; S.cargas.carac.acoes.push({ id, nome: 'Q' + (S.cargas.carac.acoes.length), tipo: 'Q', cat: 'A', psi0: 0.7, psi1: 0.5, psi2: 0.3, val }); },
     delAcao(i) { S.cargas.carac.acoes.splice(i, 1); },
@@ -974,8 +984,8 @@
 
     const cams = C.camadasLista(S);
     H.push(`<h2>4. Terreno</h2>
-      <table><tr><th>Camada</th><th>Topo</th><th>Base</th><th>γ / γsat</th><th>φ'</th><th>c'</th><th>cu</th><th>E</th><th>ν</th><th>σadm</th><th>NSPT</th></tr>
-      ${cams.map(L => `<tr><td>${esc(L.c.nome)}</td><td class="mono">${f(L.topo, 2)}</td><td class="mono">${isFinite(L.base) ? f(L.base, 2) : '—'}</td><td class="mono">${f(+L.c.gamma, 1)} / ${f(+L.c.gammaSat, 1)}</td><td class="mono">${f(+L.c.phi, 1)}°</td><td class="mono">${f(+L.c.c, 1)}</td><td class="mono">${f(+L.c.cu, 1)}</td><td class="mono">${f(+L.c.E, 1)}</td><td class="mono">${f(+L.c.nu, 2)}</td><td class="mono">${f(+L.c.sigAdm, 0)}</td><td class="mono">${+L.c.spt ? f(+L.c.spt, 0) : '—'}</td></tr>`).join('')}</table>
+      <table><tr><th>Camada</th><th>Comport.</th><th>Topo</th><th>Base</th><th>γ / γsat</th><th>φ'</th><th>c'</th><th>cu</th><th>E</th><th>ν</th><th>σadm</th><th>NSPT</th></tr>
+      ${cams.map(L => `<tr><td>${esc(L.c.nome)}</td><td>${L.c.comport === 'naodrenado' ? 'Não drenado' : 'Drenado'}</td><td class="mono">${f(L.topo, 2)}</td><td class="mono">${isFinite(L.base) ? f(L.base, 2) : '—'}</td><td class="mono">${f(+L.c.gamma, 1)} / ${f(+L.c.gammaSat, 1)}</td><td class="mono">${f(+L.c.phi, 1)}°</td><td class="mono">${f(+L.c.c, 1)}</td><td class="mono">${L.c.comport === 'naodrenado' ? f(+L.c.cu, 1) : '—'}</td><td class="mono">${f(+L.c.E, 1)}</td><td class="mono">${f(+L.c.nu, 2)}</td><td class="mono">${f(+L.c.sigAdm, 0)}</td><td class="mono">${+L.c.spt ? f(+L.c.spt, 0) : '—'}</td></tr>`).join('')}</table>
       <p>Nível freático: ${isFinite(g.dw) ? 'à profundidade de ' + f(g.dw, 2) + ' m' : 'não considerado'}. Unidades: m, kN/m³, °, kPa, MPa.</p>`);
 
     // ações

@@ -265,6 +265,9 @@
      Perfil do terreno
      --------------------------------------------------------------------- */
   // camadas: [{nome, esp (m; 0 = até ao fim), gamma, gammaSat, phi, c, cu, E (MPa), nu, sigAdm}]
+  // comportamento da camada: 'drenado' (granulares) ou 'naodrenado' (finos: verifica curto e longo prazo)
+  const naoDrenado = (c) => (c.comport ? c.comport === 'naodrenado' : (+c.cu || 0) > 0);
+  const cuDe = (c) => naoDrenado(c) ? (+c.cu || 0) : 0;
   function camadaEm(st, z) {
     const cs = st.terreno.modo === 'unica' ? [st.terreno.camadas[0]] : st.terreno.camadas;
     let topo = 0;
@@ -550,14 +553,14 @@
   function paramsTerreno(st, geo, mset, ef) {
     const cam = camadaEm(st, geo.Df + 1e-6).c;
     // opção: parâmetros mínimos até B abaixo da base
-    let phik = +cam.phi || 0, ck = +cam.c || 0, cuk = +cam.cu || 0, g = +cam.gamma, gs = +cam.gammaSat || g;
+    let phik = +cam.phi || 0, ck = +cam.c || 0, cuk = cuDe(cam), g = +cam.gamma, gs = +cam.gammaSat || g;
     if (st.analise.paramZona === 'min' && st.terreno.modo !== 'unica') {
       const zmax = geo.Df + Math.min(geo.B, geo.L);
       for (const L of camadasLista(st)) {
         if (L.base <= geo.Df || L.topo >= zmax) continue;
         if ((+L.c.phi || 0) < phik) phik = +L.c.phi || 0;
         if ((+L.c.c || 0) < ck) ck = +L.c.c || 0;
-        if ((+L.c.cu || 0) > 0 && (+L.c.cu < cuk || cuk === 0)) cuk = +L.c.cu;
+        if (cuDe(L.c) > 0 && (cuDe(L.c) < cuk || cuk === 0)) cuk = cuDe(L.c);
       }
     }
     const phid = Math.atan(Math.tan(phik * DEG) / mset.phi) / DEG;
@@ -839,21 +842,26 @@
     if (!combos.length) avisos.push('Não há combinações de ações: introduza ações no menu Ações.');
     // coerência dos dados do terreno: γsat ≥ γ
     {
-      const bad = camadasLista(st).filter(L => (+L.c.gammaSat || 0) < (+L.c.gamma || 0));
+      const bad = st.terreno.nf && st.terreno.nf.considerar ? camadasLista(st).filter(L => (+L.c.gammaSat || 0) < (+L.c.gamma || 0)) : [];
       if (bad.length) R.checks.push({ id: 'dados-gama', grupo: 'Dados', nome: 'Peso volúmico saturado ≥ peso volúmico (γsat ≥ γ)', ref: 'Dados do terreno', eta: Infinity, ok: false, comb: null,
         info: 'Corrigir no menu Terreno: ' + bad.map(L => `"${L.c.nome}" (γ = ${fmt(+L.c.gamma, 1)}; γsat = ${fmt(+L.c.gammaSat, 1)} kN/m³)`).join('; ') + '.' });
     }
     if (geo.dw < geo.Df) avisos.push('Nível freático acima da base da sapata: considerada a impulsão (subpressão) na base.');
 
     const usaDren = (geo => { const c = camadaEm(st, geo.Df + 1e-6).c; return (+c.phi || 0) > 0 || (+c.c || 0) > 0; })(geo);
-    const usaNDren = (geo => { const c = camadaEm(st, geo.Df + 1e-6).c; return (+c.cu || 0) > 0; })(geo);
+    const usaNDren = (geo => { const c = camadaEm(st, geo.Df + 1e-6).c; return cuDe(c) > 0; })(geo);
+    {
+      const cb0 = camadaEm(st, geo.Df + 1e-6).c;
+      if (naoDrenado(cb0) && !(+cb0.cu > 0)) R.checks.push({ id: 'dados-cu', grupo: 'Dados', nome: 'Resistência não drenada cu da camada de fundação', ref: 'Dados do terreno', eta: Infinity, ok: false, comb: null,
+        info: `A camada "${cb0.nome}" é não drenada: indique cu no menu Terreno.` });
+    }
     const camBase = camadaEm(st, geo.Df + 1e-6).c;
 
     // camada mais fraca abaixo (EC7 6.5.2.2(5))
     if (st.terreno.modo !== 'unica') {
       for (const L of camadasLista(st)) {
         if (L.topo > geo.Df && L.topo < geo.Df + 2 * Math.min(geo.B, geo.L)) {
-          if ((+L.c.phi || 0) < (+camBase.phi || 0) - 1e-9 || ((+camBase.cu || 0) > 0 && (+L.c.cu || 0) < +camBase.cu)) {
+          if ((+L.c.phi || 0) < (+camBase.phi || 0) - 1e-9 || (cuDe(camBase) > 0 && cuDe(L.c) < cuDe(camBase))) {
             avisos.push(`A camada "${L.c.nome}" (topo a ${L.topo.toFixed(2)} m) é mais fraca e está a menos de 2B da base: verificar o punçoamento no terreno (EC7 6.5.2.2(5)) ou usar parâmetros mínimos da zona.`);
           }
         }
