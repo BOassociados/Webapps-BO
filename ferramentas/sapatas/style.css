@@ -202,11 +202,16 @@ legend, .group-title {
   font-family: var(--f-mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--faint);
   padding: 0; margin-bottom: 2px;
 }
-.row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 10px; row-gap: 0; }
 .row.r3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .row.r1 { grid-template-columns: minmax(0, 1fr); }
-.fld { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.fld > label { font-size: 12px; color: var(--dim); display: flex; justify-content: space-between; gap: 6px; }
+.fld { display: grid; grid-template-rows: auto auto auto; row-gap: 4px; min-width: 0; align-content: start; }
+/* campos lado a lado: etiqueta, caixa e nota alinhadas em linhas comuns */
+.row > .fld { grid-row: span 3; grid-template-rows: subgrid; }
+.fld > label { font-size: 12px; color: var(--dim); display: flex; justify-content: space-between; gap: 6px; align-self: end; }
+:not(.row) > .fld > span:empty { display: none; }
+.inpw { position: relative; min-width: 0; }
+.inpw .un { position: absolute; right: 9px; top: 50%; transform: translateY(-50%); font-family: var(--f-mono); font-size: 11.5px; color: var(--faint); pointer-events: none; }
 .fld > label .u { font-family: var(--f-mono); font-size: 11px; color: var(--faint); }
 .inp, select.inp, textarea.inp {
   width: 100%; min-width: 0; background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px;
@@ -233,6 +238,8 @@ textarea.inp { resize: vertical; min-height: 70px; font-family: var(--f-mono); f
 .info dd { margin: 0; text-align: right; font-family: var(--f-mono); color: var(--text); font-variant-numeric: tabular-nums; }
 .note { font-size: 12px; color: var(--dim); background: var(--accent-soft); border-radius: var(--r); padding: 8px 10px; }
 .note.warn { background: var(--warn-soft); color: var(--text); }
+.note.err { background: var(--bad-soft); color: var(--bad); font-weight: 600; }
+.inp.bad, .inpw .inp.bad { border-color: var(--bad); box-shadow: 0 0 0 3px var(--bad-soft); }
 
 .tbl-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r); }
 table.t { border-collapse: collapse; width: 100%; font-size: 12px; }
@@ -278,6 +285,7 @@ table.t td.txt input { text-align: left; min-width: 90px; }
   padding-block: 8px; font-size: 11.5px; color: var(--faint); display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
 }
 .aviso strong { color: var(--warn); font-weight: 600; }
+.aviso span:last-child { margin-left: auto; white-space: nowrap; }
 
 /* modais (relatório, JSON) */
 .overlay { position: fixed; inset: 0; background: rgba(8, 10, 12, 0.66); z-index: 50; display: flex; justify-content: center; padding: max(12px, env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) max(12px, env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px)); }

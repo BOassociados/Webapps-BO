@@ -265,6 +265,9 @@
      Perfil do terreno
      --------------------------------------------------------------------- */
   // camadas: [{nome, esp (m; 0 = até ao fim), gamma, gammaSat, phi, c, cu, E (MPa), nu, sigAdm}]
+  // comportamento da camada: 'drenado' (granulares) ou 'naodrenado' (finos: verifica curto e longo prazo)
+  const naoDrenado = (c) => (c.comport ? c.comport === 'naodrenado' : (+c.cu || 0) > 0);
+  const cuDe = (c) => naoDrenado(c) ? (+c.cu || 0) : 0;
   function camadaEm(st, z) {
     const cs = st.terreno.modo === 'unica' ? [st.terreno.camadas[0]] : st.terreno.camadas;
     let topo = 0;
@@ -550,14 +553,14 @@
   function paramsTerreno(st, geo, mset, ef) {
     const cam = camadaEm(st, geo.Df + 1e-6).c;
     // opção: parâmetros mínimos até B abaixo da base
-    let phik = +cam.phi || 0, ck = +cam.c || 0, cuk = +cam.cu || 0, g = +cam.gamma, gs = +cam.gammaSat || g;
+    let phik = +cam.phi || 0, ck = +cam.c || 0, cuk = cuDe(cam), g = +cam.gamma, gs = +cam.gammaSat || g;
     if (st.analise.paramZona === 'min' && st.terreno.modo !== 'unica') {
       const zmax = geo.Df + Math.min(geo.B, geo.L);
       for (const L of camadasLista(st)) {
         if (L.base <= geo.Df || L.topo >= zmax) continue;
         if ((+L.c.phi || 0) < phik) phik = +L.c.phi || 0;
         if ((+L.c.c || 0) < ck) ck = +L.c.c || 0;
-        if ((+L.c.cu || 0) > 0 && (+L.c.cu < cuk || cuk === 0)) cuk = +L.c.cu;
+        if (cuDe(L.c) > 0 && (cuDe(L.c) < cuk || cuk === 0)) cuk = cuDe(L.c);
       }
     }
     const phid = Math.atan(Math.tan(phik * DEG) / mset.phi) / DEG;
@@ -837,17 +840,28 @@
       if (Math.abs(p.x) + p.cx / 2 > geo.B / 2 + 1e-9 || Math.abs(p.y) + p.cy / 2 > geo.L / 2 + 1e-9) avisos.push(`O pilar ${p.id} sai fora da planta da sapata.`);
     }
     if (!combos.length) avisos.push('Não há combinações de ações: introduza ações no menu Ações.');
+    // coerência dos dados do terreno: γsat ≥ γ
+    {
+      const bad = st.terreno.nf && st.terreno.nf.considerar ? camadasLista(st).filter(L => (+L.c.gammaSat || 0) < (+L.c.gamma || 0)) : [];
+      if (bad.length) R.checks.push({ id: 'dados-gama', grupo: 'Dados', nome: 'Peso volúmico saturado ≥ peso volúmico (γsat ≥ γ)', ref: 'Dados do terreno', eta: Infinity, ok: false, comb: null,
+        info: 'Corrigir no menu Terreno: ' + bad.map(L => `"${L.c.nome}" (γ = ${fmt(+L.c.gamma, 1)}; γsat = ${fmt(+L.c.gammaSat, 1)} kN/m³)`).join('; ') + '.' });
+    }
     if (geo.dw < geo.Df) avisos.push('Nível freático acima da base da sapata: considerada a impulsão (subpressão) na base.');
 
     const usaDren = (geo => { const c = camadaEm(st, geo.Df + 1e-6).c; return (+c.phi || 0) > 0 || (+c.c || 0) > 0; })(geo);
-    const usaNDren = (geo => { const c = camadaEm(st, geo.Df + 1e-6).c; return (+c.cu || 0) > 0; })(geo);
+    const usaNDren = (geo => { const c = camadaEm(st, geo.Df + 1e-6).c; return cuDe(c) > 0; })(geo);
+    {
+      const cb0 = camadaEm(st, geo.Df + 1e-6).c;
+      if (naoDrenado(cb0) && !(+cb0.cu > 0)) R.checks.push({ id: 'dados-cu', grupo: 'Dados', nome: 'Resistência não drenada cu da camada de fundação', ref: 'Dados do terreno', eta: Infinity, ok: false, comb: null,
+        info: `A camada "${cb0.nome}" é não drenada: indique cu no menu Terreno.` });
+    }
     const camBase = camadaEm(st, geo.Df + 1e-6).c;
 
     // camada mais fraca abaixo (EC7 6.5.2.2(5))
     if (st.terreno.modo !== 'unica') {
       for (const L of camadasLista(st)) {
         if (L.topo > geo.Df && L.topo < geo.Df + 2 * Math.min(geo.B, geo.L)) {
-          if ((+L.c.phi || 0) < (+camBase.phi || 0) - 1e-9 || ((+camBase.cu || 0) > 0 && (+L.c.cu || 0) < +camBase.cu)) {
+          if ((+L.c.phi || 0) < (+camBase.phi || 0) - 1e-9 || (cuDe(camBase) > 0 && cuDe(L.c) < cuDe(camBase))) {
             avisos.push(`A camada "${L.c.nome}" (topo a ${L.topo.toFixed(2)} m) é mais fraca e está a menos de 2B da base: verificar o punçoamento no terreno (EC7 6.5.2.2(5)) ou usar parâmetros mínimos da zona.`);
           }
         }
@@ -1151,7 +1165,7 @@
         for (const r of est) { const a = r.amarr && r.amarr[dir]; if (a && (!w || a.eta > w.a.eta)) w = { r, a }; }
         const lbl = dir === 'x' ? 'X' : 'Y';
         if (w) add({ id: 'amarr-' + dir, grupo: 'Estrutural', nome: `Amarração da armadura inferior segundo ${lbl}`, ref: 'EC2 9.8.2.2, 8.4', eta: w.a.eta, ok: w.a.eta <= 1, comb: w.r.comb,
-          val: w.a.lbd, lim: w.a.lav, un: 'mm', info: `Secção a x = ${fmt(w.a.x, 3)} m do bordo; Fs = ${fmt(w.a.Fs, 1)} kN; σsd = ${fmt(w.a.sig, 0)} MPa; ${m.patilhas ? 'com patilhas (α1 = 0,7)' : 'varões retos'}` });
+          val: w.a.lbd, lim: w.a.lav, un: 'mm', info: `Secção a x = ${fmt(w.a.x, 3)} m do bordo; Fs = ${fmt(w.a.Fs, 1)} kN; σsd = ${fmt(w.a.sig, 0)} MPa; ${m.patilhas ? `com patilhas (α1 = ${w.a.alfa1 === 0.7 ? '0,7' : '1,0'}: cd = ${fmt(w.a.cd, 0)} mm ${w.a.alfa1 === 0.7 ? '>' : '≤'} 3φ)` : 'varões retos (α1 = 1,0)'}` });
       }
     }
 
@@ -1160,19 +1174,39 @@
       const phiMin = 10; // AN – NA–9.8.2.1(1)
       const fmin = Math.min(fx, fy);
       add({ id: 'phimin', grupo: 'Pormenorização', nome: 'Diâmetro mínimo dos varões da malha inferior', ref: 'EC2 9.8.2.1 (AN: φmin = 10 mm)', eta: phiMin / fmin, ok: fmin >= phiMin, val: fmin, lim: phiMin, un: 'mm' });
-      const smax = +m.sMax || 0.30, smin = +m.sMin || 0.10;
-      const sM = Math.max(sxB, syB), sm = Math.min(sxB, syB);
-      add({ id: 'smax', grupo: 'Pormenorização', nome: 'Espaçamento máximo entre varões', ref: 'Critério do projetista (EC2 9.3.1.1)', eta: sM / smax, ok: sM <= smax + 1e-9, val: sM * 100, lim: smax * 100, un: 'cm' });
-      const sminEC2 = Math.max(Math.max(fx, fy), (+m.dg || 20) + 5, 20) / 1000 + Math.max(fx, fy) / 1000;
-      const smin2 = Math.max(smin, sminEC2);
-      add({ id: 'smin', grupo: 'Pormenorização', nome: 'Espaçamento mínimo entre varões', ref: 'EC2 8.2 + critério do projetista', eta: sm > 0 ? smin2 / sm : Infinity, ok: sm >= smin2 - 1e-9, val: sm * 100, lim: smin2 * 100, un: 'cm' });
-      // arranques dos pilares
+      // espaçamentos pelo EC2 (malhas inferior e, se existir, superior)
+      const sMaxGeral = Math.min(3 * geo.h, 0.40);          // 9.3.1.1(3): 3h ≤ 400 mm
+      const sMaxEC2 = Math.min(2 * geo.h, 0.25);            // zona de momento máximo: 2h ≤ 250 mm
+      const livreMin = (phi) => Math.max(phi, (+m.dg || 20) + 5, 20) / 1000;   // 8.2(2): k1·φ; dg + k2; 20 mm
+      R.espac = { sMaxGeral, sMaxEC2, livreMin: livreMin(Math.max(fx, fy)), sMinX: livreMin(fx) + fx / 1000, sMinY: livreMin(fy) + fy / 1000 };
+      const malhas = [['inferior X', fx, sxB], ['inferior Y', fy, syB]];
+      if (sup) malhas.push(['superior X', +m.armSup.x.phi, +m.armSup.x.s], ['superior Y', +m.armSup.y.phi, +m.armSup.y.s]);
+      let wM = null, wm = null;
+      for (const [nm, ph, s] of malhas) {
+        const smin = livreMin(ph) + ph / 1000;
+        if (!wM || s / sMaxEC2 > wM.eta) wM = { nm, s, eta: s / sMaxEC2 };
+        if (!wm || smin / s > wm.eta) wm = { nm, s, smin, ph, eta: s > 0 ? smin / s : Infinity };
+      }
+      add({ id: 'smax', grupo: 'Pormenorização', nome: 'Espaçamento máximo entre varões', ref: 'EC2 9.3.1.1(3): 2h ≤ 250 mm na zona de momento máximo', eta: wM.eta, ok: wM.eta <= 1 + 1e-9, val: wM.s * 100, lim: sMaxEC2 * 100, un: 'cm',
+        info: `Malha ${wM.nm}. Fora da zona de momento máximo o limite seria min(3h; 400 mm) = ${fmt(sMaxGeral * 1000, 0)} mm.` });
+      add({ id: 'smin', grupo: 'Pormenorização', nome: 'Espaçamento mínimo entre varões', ref: 'EC2 8.2(2): livre ≥ máx(φ; dg + 5 mm; 20 mm)', eta: wm.eta, ok: wm.eta <= 1 + 1e-9, val: wm.s * 100, lim: wm.smin * 100, un: 'cm',
+        info: `Malha ${wm.nm}: espaçamento livre mínimo ${fmt((wm.smin - wm.ph / 1000) * 1000, 0)} mm + φ${wm.ph}.` });
+      // arranques dos pilares (EC2 8.4): compressão só com troço reto; tração com dobra (lb,eq)
       for (const p of geo.pil) {
         const sig = (+m.sigArr || 1) * ac.fyd;
-        const am = amarracao(bet, p.phi, sig, 1, true);
-        const disp = (geo.h - cn - (fx + fy) / 1000) * 1000;
-        add({ id: 'arr-' + p.id, grupo: 'Pormenorização', nome: `Amarração dos arranques do pilar ${p.id} (Ø${p.phi})`, ref: 'EC2 8.4.4 (compressão)', eta: am.lbd / disp, ok: am.lbd <= disp, val: am.lbd, lim: disp, un: 'mm', aviso: true,
-          info: `lb,rqd = ${fmt(am.lbrqd, 0)} mm com σsd = ${fmt(sig, 0)} MPa; lb,min = ${fmt(am.lbmin, 0)} mm. Altura disponível = h − c − Øx − Øy.` });
+        const ac_ = amarracao(bet, p.phi, sig, 1, true);
+        const disp = (geo.h - cn - (fx + fy) / 1000) * 1000;   // troço vertical disponível
+        add({ id: 'arr-' + p.id, grupo: 'Pormenorização', nome: `Arranques do pilar ${p.id} (Ø${p.phi}) — compressão`, ref: 'EC2 8.4.1(2), 8.4.4 (só troço reto)', eta: ac_.lbd / disp, ok: ac_.lbd <= disp, val: ac_.lbd, lim: disp, un: 'mm', aviso: true,
+          info: `lbd = ${fmt(ac_.lbd, 0)} mm (lb,rqd = ${fmt(ac_.lbrqd, 0)} mm, σsd = ${fmt(sig, 0)} MPa; lb,min = ${fmt(ac_.lbmin, 0)} mm). Troço vertical disponível = h − c − Øx − Øy = ${fmt(disp, 0)} mm. As dobras não contam em compressão: se não chegar, aumentar h ou reduzir o diâmetro.` });
+        // tração: varão dobrado (α1 = 0,7 se cd > 3φ; nos arranques cd = recobrimento lateral na sapata, em geral > 3φ)
+        const cdA = Math.min(cn * 1000, 1e9);
+        const a1 = cdA > 3 * p.phi ? 0.7 : 1.0;
+        const at = amarracao(bet, p.phi, sig, a1, false);
+        const pat = Math.max(0, at.lbd - disp);
+        const patR = pat > 0 ? Math.ceil(Math.max(pat, 5 * p.phi) / 50) * 50 : 0;
+        add({ id: 'arrT-' + p.id, grupo: 'Pormenorização', nome: `Arranques do pilar ${p.id} (Ø${p.phi}) — tração, patilha`, ref: 'EC2 8.4.4(2), Quadro 8.2 (lb,eq = α1·lb,rqd)', eta: disp > 0 ? Math.min(1, at.lbd / (disp + patR || 1)) : Infinity, ok: true,
+          info: pat > 0 ? `lb,eq = ${fmt(at.lbd, 0)} mm (α1 = ${a1 === 0.7 ? '0,7' : '1,0'}) > troço vertical ${fmt(disp, 0)} mm → dobrar ${fmt(patR, 0)} mm para os lados sobre a malha inferior (${fmt(pat, 0)} mm calculados, arredondado a 50 mm).`
+            : `lb,eq = ${fmt(at.lbd, 0)} mm ≤ troço vertical ${fmt(disp, 0)} mm: basta o troço reto (patilha construtiva para apoio na malha).` });
       }
       const rig = geo.vMax <= 2 * geo.h;
       R.rigida = rig;
@@ -1285,6 +1319,10 @@
       const As = dir === 'x' ? dd.AsX : dd.AsY;
       const d = dir === 'x' ? dd.dx : dd.dy;
       const half = dir === 'x' ? geo.B / 2 : geo.L / 2;
+      // EC2 Quadro 8.2: α1 = 0,7 para varões dobrados só se cd > 3φ; cd = min(a/2; c) (Figura 8.3)
+      const sBar = (+(dir === 'x' ? m.armInf.x.s : m.armInf.y.s) || 0.2) * 1000;
+      const cd = Math.min((sBar - phi) / 2, +m.cnom || 50);
+      const alfa1 = hook && cd > 3 * phi ? 0.7 : 1.0;
       let pior = null;
       for (const lado of [1, -1]) {
         // face do pilar mais próxima deste bordo
@@ -1311,10 +1349,10 @@
           const zi = 0.9 * d;
           const Fs = Rr * ze / zi;
           const sig = Math.min(ac.fyd, Fs / (As * 1e-4) / 1000);
-          const am = amarracao(bet, phi, sig, hook ? 0.7 : 1, false);
+          const am = amarracao(bet, phi, sig, alfa1, false);
           const lav = (xd - (+m.cnom || 50) / 1000) * 1000 + (hook ? Math.max(0, (geo.h - 2 * (+m.cnom || 50) / 1000) * 1000 - phi) : 0);
           const eta = lav > 0 ? am.lbd / lav : Infinity;
-          if (!pior || eta > pior.eta) pior = { eta, x: xd, Fs, sig, lbd: am.lbd, lav, R: Rr, ze, zi, lado };
+          if (!pior || eta > pior.eta) pior = { eta, x: xd, Fs, sig, lbd: am.lbd, lav, R: Rr, ze, zi, lado, alfa1, cd };
         }
       }
       if (pior) res[dir] = pior;

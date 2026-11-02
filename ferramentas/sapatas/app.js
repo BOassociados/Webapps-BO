@@ -19,22 +19,21 @@
   const TIPOS_ACAO = [['G', 'G — permanente'], ['Q', 'Q — sobrecarga'], ['W', 'W — vento'], ['S', 'S — neve'], ['E', 'E — sismo (AEd)']];
   const TIPOS_COMB = [['A1', 'ELU fundamental (A1)'], ['A2', 'ELU A2 (DA1-C2)'], ['EQU', 'EQU'], ['SIS', 'Sísmica'], ['CAR', 'ELS característica'], ['FREQ', 'ELS frequente'], ['QP', 'ELS quase-permanente']];
   const TIPO_LBL = { A1: 'ELU · A1 (DA1-C1)', A2: 'ELU · A2 (DA1-C2)', EQU: 'EQU', SIS: 'Sísmica', CAR: 'ELS característica', FREQ: 'ELS frequente', QP: 'ELS quase-permanente' };
-  const PHIS = [8, 10, 12, 16, 20, 25, 32];
+  const PHIS = [10, 12, 16, 20, 25, 32]; // AN: φmin = 10 mm em sapatas (NA–9.8.2.1) e pilares (NA–9.5.2)
 
   function hoje() { const d = new Date(); return d.toISOString().slice(0, 10); }
   function exemplo() {
     return {
       app: 'sapatas-bo', versao: 1,
-      projeto: { obra: 'Exemplo — edifício de habitação', cliente: '', local: 'Braga', ref: 'S1', autor: '', verificador: '', data: hoje(), notas: 'Valores de exemplo: substituir pelos dados da obra.' },
+      projeto: { obra: '', cliente: '', local: '', ref: '', autor: '', verificador: '', data: '', notas: '' },
       geometria: { tipo: 'ret', B: 2.1, L: 2.1, h: 0.5, Df: 1.0, gammaC: 25, gammaAterro: 18, qSup: 0, qSupTipo: 'Q', qSupPsi0: 0.7, qSupPsi1: 0.5, qSupPsi2: 0.3 },
       pilares: [{ id: 'P1', forma: 'ret', cx: 0.4, cy: 0.4, D: 0.4, x: 0, y: 0, phi: 16 }],
-      materiais: { betao: 'C30/37', aco: 'A500', cnom: 50, dg: 20, armInf: { x: { phi: 16, s: 0.2 }, y: { phi: 16, s: 0.2 } }, armSup: { ativa: false, x: { phi: 12, s: 0.2 }, y: { phi: 12, s: 0.2 } }, camadaInf: 'x', patilhas: true, seccaoRef: 'face', sMax: 0.3, sMin: 0.1, sigArr: 1 },
+      materiais: { betao: 'C30/37', aco: 'A500', cnom: 50, dg: 20, armInf: { x: { phi: 16, s: 0.2 }, y: { phi: 16, s: 0.2 } }, armSup: { ativa: false, x: { phi: 12, s: 0.2 }, y: { phi: 12, s: 0.2 } }, camadaInf: 'x', patilhas: true, seccaoRef: '015', sigArr: 1 },
       terreno: {
-        modo: 'multi',
+        modo: 'unica',
         camadas: [
-          { nome: 'Aterro', esp: 0.8, gamma: 18, gammaSat: 19, phi: 28, c: 0, cu: 0, E: 8, nu: 0.3, sigAdm: 100, spt: 6 },
-          { nome: 'Areia siltosa', esp: 4, gamma: 19, gammaSat: 20, phi: 32, c: 0, cu: 0, E: 25, nu: 0.3, sigAdm: 250, spt: 22 },
-          { nome: 'Saibro (granito alterado)', esp: 0, gamma: 20, gammaSat: 21, phi: 36, c: 10, cu: 0, E: 80, nu: 0.25, sigAdm: 400, spt: 60 }
+          { nome: 'Areia siltosa', comport: 'drenado', esp: 4, gamma: 18, gammaSat: 18, phi: 28, c: 0, cu: 0, E: 20, nu: 0.3, sigAdm: 200, spt: 20 },
+          { nome: 'Saibro (granito alterado)', comport: 'drenado', esp: 0, gamma: 20, gammaSat: 21, phi: 36, c: 10, cu: 0, E: 80, nu: 0.25, sigAdm: 400, spt: 60 }
         ],
         nf: { considerar: true, prof: 2.0 }
       },
@@ -54,13 +53,13 @@
   }
   function vazio() {
     const e = exemplo();
-    e.projeto = { obra: '', cliente: '', local: '', ref: 'S1', autor: '', verificador: '', data: hoje(), notas: '' };
+    e.projeto = { obra: '', cliente: '', local: '', ref: '', autor: '', verificador: '', data: '', notas: '' };
     e.cargas.carac.acoes = [
       { id: 'a1', nome: 'G', tipo: 'G', cat: 'A', psi0: 0, psi1: 0, psi2: 0, val: { P1: { N: 0, Mx: 0, My: 0, Vx: 0, Vy: 0 } } },
       { id: 'a2', nome: 'Q', tipo: 'Q', cat: 'A', psi0: 0.7, psi1: 0.5, psi2: 0.3, val: { P1: { N: 0, Mx: 0, My: 0, Vx: 0, Vy: 0 } } }
     ];
     e.terreno.modo = 'unica';
-    e.terreno.camadas = [{ nome: 'Terreno de fundação', esp: 0, gamma: 19, gammaSat: 20, phi: 30, c: 0, cu: 0, E: 20, nu: 0.3, sigAdm: 200, spt: 0 }];
+    e.terreno.camadas = [{ nome: 'Terreno de fundação', comport: 'drenado', esp: 0, gamma: 19, gammaSat: 20, phi: 30, c: 0, cu: 0, E: 20, nu: 0.3, sigAdm: 200, spt: 0 }];
     e.terreno.nf = { considerar: false, prof: 5 };
     return e;
   }
@@ -81,13 +80,21 @@
       for (const p of s.pilares) a.val[p.id] = Object.assign({ N: 0, Mx: 0, My: 0, Vx: 0, Vy: 0 }, a.val[p.id] || {});
     }
     if (!s.terreno.camadas.length) s.terreno.camadas = vazio().terreno.camadas;
+    for (const c of s.terreno.camadas) if (c.comport !== 'drenado' && c.comport !== 'naodrenado') c.comport = (+c.cu || 0) > 0 ? 'naodrenado' : 'drenado';
+    for (const m of [s.materiais.armInf.x, s.materiais.armInf.y, s.materiais.armSup.x, s.materiais.armSup.y, ...s.pilares]) if (+m.phi < 10) m.phi = 10;
+    if (s.projeto.obra === 'Exemplo — edifício de habitação') { s.projeto.obra = ''; if (s.projeto.local === 'Braga') s.projeto.local = ''; }
+    if (s.projeto.notas === 'Valores de exemplo: substituir pelos dados da obra.') { s.projeto.notas = ''; if (s.projeto.ref === 'S1') s.projeto.ref = ''; s.projeto.data = ''; }
     return s;
   }
   function carregar() { try { const t = localStorage.getItem(KEY); if (t) return normalizar(JSON.parse(t)); } catch (e) { /* sem armazenamento */ } return null; }
   let saveT = 0;
   function guardarLocal() { clearTimeout(saveT); saveT = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* ignorar */ } }, 300); }
 
-  let S = carregar() || normalizar(exemplo());
+  // Ao abrir começa sempre pelo exemplo base (1 pilar 0,40 × 0,40 centrado).
+  // O último cálculo guardado neste browser pode ser retomado no menu Projeto.
+  let anterior = carregar();
+  let S = normalizar(exemplo());
+  if (anterior && JSON.stringify(anterior) === JSON.stringify(S)) anterior = null;
   let R = null;
   let calcErro = null;
   const ui = { step: 'geometria', view: 'planta', combId: null, check: null, novoArm: 0, ui_ax: '1', ui_ay: '1', ui_relComb: false };
@@ -98,7 +105,7 @@
   /* ---------------------------------------------------------------- menus */
   const STEPS = [
     { id: 'projeto', t: 'Projeto', d: 'Identificação da obra e da sapata para a memória de cálculo.', view: 'planta' },
-    { id: 'geometria', t: 'Geometria', d: 'Sapata centrada retangular. Dimensões em planta, altura e profundidade da base.', view: 'planta' },
+    { id: 'geometria', t: 'Geometria', d: 'Tipo de sapata, dimensões, pesos e sobrecarga.', view: 'planta' },
     { id: 'pilares', t: 'Pilares', d: 'Até 4 pilares retangulares ou circulares, com posição relativa ao centro da sapata.', view: 'planta' },
     { id: 'materiais', t: 'Materiais e armaduras', d: 'Betão, aço, recobrimento e malhas de armadura.', view: 'corte' },
     { id: 'terreno', t: 'Terreno', d: 'Camada única ou perfil multicamada, nível freático e parâmetros geotécnicos.', view: 'corte' },
@@ -129,19 +136,21 @@
     o = o || {};
     const id = idOf(path);
     const v = path.startsWith('ui_') ? ui[path] : get(S, path);
-    const unit = o.u ? `<span class="u">${o.u}</span>` : '';
+    const unit = '';
     const r = o.r ? ' data-r="1"' : '';
     let inp;
     if (o.opts) {
       inp = `<select class="inp" id="${id}" data-p="${path}" data-k="${o.k || 'str'}"${r}>${o.opts.map(([val, t]) => `<option value="${esc(val)}" ${String(val) === String(v) ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>`;
     } else if (o.area) {
-      inp = `<textarea class="inp" id="${id}" data-p="${path}" data-k="str" rows="3" style="font-family:var(--f-body);font-size:13px">${esc(v)}</textarea>`;
+      inp = `<textarea class="inp" id="${id}" data-p="${path}" data-k="str" rows="3"${o.ph ? ` placeholder="${esc(o.ph)}"` : ''} style="font-family:var(--f-body);font-size:13px">${esc(v)}</textarea>`;
     } else if (o.k === 'str') {
-      inp = `<input class="inp" id="${id}" data-p="${path}" data-k="str" value="${esc(v)}" autocomplete="off"${r}>`;
+      inp = `<input class="inp" id="${id}" data-p="${path}" data-k="str" value="${esc(v)}"${o.ph ? ` placeholder="${esc(o.ph)}"` : ''} autocomplete="off"${r}>`;
     } else {
-      inp = `<input class="inp n" id="${id}" data-p="${path}" data-k="num" value="${esc(showNum(v))}" inputmode="decimal" autocomplete="off"${r}>`;
+      inp = `<input class="inp n" id="${id}" data-p="${path}" data-k="num" value="${esc(showNum(v))}" inputmode="decimal" autocomplete="off"${r}${o.u ? ` style="padding-right:calc(14px + ${String(o.u).length}ch)"` : ''}>`;
+      if (o.u) inp = `<div class="inpw">${inp}<span class="un" aria-hidden="true">${o.u}</span></div>`;
     }
-    return `<div class="fld"><label for="${id}"><span>${label}</span>${unit}</label>${inp}${o.hint ? `<p class="hint">${o.hint}</p>` : ''}</div>`;
+    const lab = label ? `<label for="${id}"><span>${label}</span>${unit}</label>` : `<span></span>`;
+    return `<div class="fld">${lab}${inp}${o.hint ? `<p class="hint">${o.hint}</p>` : '<span></span>'}</div>`;
   }
   function chk(label, path, o) {
     o = o || {};
@@ -154,6 +163,44 @@
     return `<div class="seg" role="group">${opts.map(([val, t]) => `<button type="button" class="${String(v) === String(val) ? 'on' : ''}" data-seg="${path}" data-val="${esc(val)}">${esc(t)}</button>`).join('')}</div>`;
   }
   const row = (cls, ...xs) => `<div class="row ${cls || ''}">${xs.join('')}</div>`;
+  const gamaErro = (c) => !!(S.terreno.nf && S.terreno.nf.considerar) && (+c.gammaSat || 0) < (+c.gamma || 0);
+  const MSG_GAMA = 'Erro: γsat tem de ser igual ou maior que γ.';
+  function validarGama(i) {
+    const c = S.terreno.camadas[i]; if (!c) return;
+    const bad = gamaErro(c);
+    const el = document.getElementById(idOf(`terreno.camadas.${i}.gammaSat`));
+    if (el) el.classList.toggle('bad', bad);
+    const msg = document.getElementById('gamaErr_' + i);
+    if (msg) msg.hidden = !bad;
+  }
+  function infoGeometria() {
+    let g;
+    try { g = C.geometria(S); } catch (e) { return ''; }
+    return info([
+      ['Área da base', f(g.A, 3) + ' m²'],
+      ['Peso da sapata', f(g.Wsap, 1) + ' kN'],
+      ['Altura de aterro', f(g.hAt, 2) + ' m'],
+      ['Peso do aterro', f(g.Wat, 1) + ' kN'],
+      ['Balanço máximo', f(g.vMax, 3) + ' m'],
+      ['Classificação', g.vMax <= 2 * g.h ? 'rígida (v ≤ 2h)' : 'flexível (v > 2h)']
+    ]);
+  }
+  function infoArmaduras() {
+    const d = R ? R.d : null;
+    return d ? info([['dx / dy', f(d.dx, 3) + ' / ' + f(d.dy, 3) + ' m'], ['As,x total', f(d.AsX, 2) + ' cm²'], ['As,y total', f(d.AsY, 2) + ' cm²'], ['ρx / ρy', f(d.rhoX * 100, 3) + ' / ' + f(d.rhoY * 100, 3) + ' %']]) : '';
+  }
+  function infoEspac() {
+    const e = R && R.espac;
+    return e ? info([['s,máx (EC2 9.3.1.1(3), 2h ≤ 250 mm)', f(e.sMaxEC2 * 1000, 0) + ' mm'], ['s,mín X / Y (EC2 8.2(2))', f(e.sMinX * 1000, 0) + ' / ' + f(e.sMinY * 1000, 0) + ' mm']]) : '';
+  }
+  function atualizarInfo() {
+    const e2 = document.getElementById('liveInfo2');
+    if (e2) e2.innerHTML = infoEspac();
+    const el = document.getElementById('liveInfo');
+    if (!el) return;
+    if (ui.step === 'geometria') el.innerHTML = infoGeometria();
+    else if (ui.step === 'materiais') el.innerHTML = infoArmaduras();
+  }
   const info = (pairs) => `<dl class="info">${pairs.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join('')}</dl>`;
 
   /* --------------------------------------------------------- painéis */
@@ -172,19 +219,20 @@
 
   const PANELS = {
     projeto() {
-      return `<fieldset><legend>Obra</legend>
-        ${fld('Obra / projeto', 'projeto.obra', { k: 'str' })}
-        ${row('', fld('Dono de obra', 'projeto.cliente', { k: 'str' }), fld('Local', 'projeto.local', { k: 'str' }))}
-        ${row('', fld('Referência da sapata', 'projeto.ref', { k: 'str' }), fld('Data', 'projeto.data', { k: 'str' }))}
+      return `<fieldset>
+        ${fld('Projeto / Obra', 'projeto.obra', { k: 'str', ph: '0000-00 - Nome do Projeto' })}
+        ${fld('Requerente', 'projeto.cliente', { k: 'str', ph: 'Requerente' })}
+        ${fld('Morada', 'projeto.local', { k: 'str', ph: 'Local da Obra' })}
+        ${row('', fld('Referência da sapata', 'projeto.ref', { k: 'str', ph: 'S1' }), fld('Data', 'projeto.data', { k: 'str', ph: 'AAAA-MM-DD' }))}
         ${row('', fld('Autor', 'projeto.autor', { k: 'str' }), fld('Verificado por', 'projeto.verificador', { k: 'str' }))}
-        ${fld('Notas', 'projeto.notas', { area: true })}
+        ${fld('Notas', 'projeto.notas', { area: true, ph: 'Observações a incluir na memória de cálculo' })}
       </fieldset>
-      <div class="note">Os dados ficam guardados neste browser. Use <b>Guardar</b> para criar um ficheiro JSON do cálculo e <b>Abrir</b> para o recuperar mais tarde ou partilhar com a equipa.</div>`;
+      ${anterior ? `<div class="note">Há um cálculo anterior guardado neste browser${anterior.projeto && anterior.projeto.obra ? ` (<b>${esc(anterior.projeto.obra)}</b>)` : ''}.<div style="margin-top:8px"><button class="btn small" type="button" data-act="retomar">Retomar o último cálculo</button></div></div>` : ''}
+      <div class="note">A aplicação abre sempre com os valores base. Use <b>Guardar</b> para criar um ficheiro JSON do cálculo e <b>Abrir</b> para o recuperar mais tarde ou partilhar com a equipa.</div>`;
     },
     geometria() {
-      const g = R ? R.geo : C.geometria(S);
       return `<fieldset><legend>Tipo de sapata</legend>
-        ${fld('Geometria', 'geometria.tipo', { opts: [['ret', 'Retangular centrada']], hint: 'Próximas geometrias: circular, excêntrica (vizinhança), de canto e sapatas associadas.' })}
+        ${fld('', 'geometria.tipo', { opts: [['ret', 'Retangular centrada']] })}
       </fieldset>
       <fieldset><legend>Dimensões</legend>
         ${row('', fld('B — dimensão segundo X', 'geometria.B', { u: 'm' }), fld('L — dimensão segundo Y', 'geometria.L', { u: 'm' }))}
@@ -195,14 +243,7 @@
         ${row('', fld('Sobrecarga à superfície', 'geometria.qSup', { u: 'kPa' }), fld('Tipo de sobrecarga', 'geometria.qSupTipo', { opts: [['Q', 'Variável'], ['G', 'Permanente']], r: true }))}
         ${S.geometria.qSupTipo === 'Q' ? row('r3', fld('ψ0', 'geometria.qSupPsi0'), fld('ψ1', 'geometria.qSupPsi1'), fld('ψ2', 'geometria.qSupPsi2')) : ''}
       </fieldset>
-      ${info([
-        ['Área da base', f(g.A, 3) + ' m²'],
-        ['Peso da sapata', f(g.Wsap, 1) + ' kN'],
-        ['Altura de aterro', f(g.hAt, 2) + ' m'],
-        ['Peso do aterro', f(g.Wat, 1) + ' kN'],
-        ['Balanço máximo', f(g.vMax, 3) + ' m'],
-        ['Classificação', g.vMax <= 2 * g.h ? 'rígida (v ≤ 2h)' : 'flexível (v > 2h)']
-      ])}`;
+      <div id="liveInfo">${infoGeometria()}</div>`;
     },
     pilares() {
       const cards = S.pilares.map((p, i) => `<div class="card">
@@ -229,15 +270,16 @@
       const bet = C.betao(S.materiais.betao), ac = C.aco(S.materiais.aco);
       return `<fieldset><legend>Materiais</legend>
         ${row('', fld('Betão', 'materiais.betao', { opts: C.BETOES.map(x => [x, x]) }), fld('Aço', 'materiais.aco', { opts: [['A500', 'A500 NR'], ['A400', 'A400 NR']] }))}
-        ${row('', fld('Recobrimento nominal', 'materiais.cnom', { u: 'mm', hint: 'Betonagem sobre betão de limpeza (EC2 4.4.1.3(4)).' }), fld('Máx. agregado dg', 'materiais.dg', { u: 'mm' }))}
+        ${row('', fld('Recobrimento nominal', 'materiais.cnom', { u: 'mm' }), fld('Máx. agregado dg', 'materiais.dg', { u: 'mm' }))}
+        <p class="hint">Betonagem sobre betão de limpeza (EC2 4.4.1.3(4)).</p>
         ${info([['fcd', f(bet.fcd, 2) + ' MPa'], ['fctm', f(bet.fctm, 2) + ' MPa'], ['fyd', f(ac.fyd, 1) + ' MPa']])}
       </fieldset>
       <fieldset><legend>Malha inferior</legend>
         ${row('', fld('Ø segundo X', 'materiais.armInf.x.phi', { opts: PHIS.map(x => [x, 'Ø' + x]), k: 'num' }), fld('Espaçamento X', 'materiais.armInf.x.s', { u: 'm' }))}
         ${row('', fld('Ø segundo Y', 'materiais.armInf.y.phi', { opts: PHIS.map(x => [x, 'Ø' + x]), k: 'num' }), fld('Espaçamento Y', 'materiais.armInf.y.s', { u: 'm' }))}
-        ${row('', fld('Camada mais baixa', 'materiais.camadaInf', { opts: [['x', 'Varões segundo X'], ['y', 'Varões segundo Y']] }), fld('Secção de referência', 'materiais.seccaoRef', { opts: [['face', 'Face do pilar'], ['015', '0,15·c para o interior']] }))}
-        ${chk('Patilhas nas extremidades (amarração com α1 = 0,7)', 'materiais.patilhas')}
-        ${d ? info([['dx / dy', f(d.dx, 3) + ' / ' + f(d.dy, 3) + ' m'], ['As,x total', f(d.AsX, 2) + ' cm²'], ['As,y total', f(d.AsY, 2) + ' cm²'], ['ρx / ρy', f(d.rhoX * 100, 3) + ' / ' + f(d.rhoY * 100, 3) + ' %']]) : ''}
+        ${row('', fld('Camada mais baixa', 'materiais.camadaInf', { opts: [['x', 'Varões segundo X'], ['y', 'Varões segundo Y']] }), fld('Secção de referência', 'materiais.seccaoRef', { opts: [['015', '0,15·c para o interior'], ['face', 'Face do pilar']] }))}
+        ${chk('Patilhas nas extremidades', 'materiais.patilhas', { hint: 'α1 = 0,7 se cd > 3φ (EC2 Quadro 8.2), senão 1,0.' })}
+        <div id="liveInfo">${d ? info([['dx / dy', f(d.dx, 3) + ' / ' + f(d.dy, 3) + ' m'], ['As,x total', f(d.AsX, 2) + ' cm²'], ['As,y total', f(d.AsY, 2) + ' cm²'], ['ρx / ρy', f(d.rhoX * 100, 3) + ' / ' + f(d.rhoY * 100, 3) + ' %']]) : ''}</div>
       </fieldset>
       <fieldset><legend>Malha superior</legend>
         ${chk('Considerar malha superior', 'materiais.armSup.ativa', { r: true })}
@@ -245,24 +287,34 @@
           row('', fld('Ø segundo Y', 'materiais.armSup.y.phi', { opts: PHIS.map(x => [x, 'Ø' + x]), k: 'num' }), fld('Espaçamento Y', 'materiais.armSup.y.s', { u: 'm' })) : ''}
       </fieldset>
       <fieldset><legend>Critérios de pormenorização</legend>
-        ${row('', fld('Espaçamento máximo', 'materiais.sMax', { u: 'm' }), fld('Espaçamento mínimo', 'materiais.sMin', { u: 'm' }))}
-        ${fld('σsd / fyd nos arranques do pilar', 'materiais.sigArr', { hint: '1,0 = arranques totalmente mobilizados (conservativo). Pode usar As,req/As,prov do pilar.' })}
+        <div id="liveInfo2">${infoEspac()}</div>
+        ${fld('Aproveitamento dos arranques do pilar (As,req / As,prov)', 'materiais.sigArr', { hint: '1,0 = varões do pilar à tensão de cálculo (conservativo). O comprimento de amarração é proporcional a este valor (EC2 8.4.3).' })}
       </fieldset>`;
     },
     terreno() {
       const unica = S.terreno.modo === 'unica';
-      const cams = (unica ? [S.terreno.camadas[0]] : S.terreno.camadas).map((c, i) => `<div class="card">
+      const comNF = !!S.terreno.nf.considerar;
+      const comOed = S.analise.metodoAss === 'oed';
+      const semAss = S.analise.usarAssent === false, semSA = S.analise.usarSigAdm === false;
+      const cams = (unica ? [S.terreno.camadas[0]] : S.terreno.camadas).map((c, i) => {
+        const nd = c.comport === 'naodrenado';
+        return `<div class="card">
         <div class="card-head"><span class="ttl">${unica ? 'Terreno de fundação' : 'Camada ' + (i + 1)}</span>${!unica && S.terreno.camadas.length > 1 ? `<button class="btn small danger" type="button" data-act="delCam" data-i="${i}">Remover</button>` : ''}</div>
-        ${row('', fld('Designação', `terreno.camadas.${i}.nome`, { k: 'str' }), unica ? fld('NSPT médio', `terreno.camadas.${i}.spt`, { hint: 'Informativo.' }) : fld('Espessura', `terreno.camadas.${i}.esp`, { u: 'm', hint: i === S.terreno.camadas.length - 1 ? 'Última camada: 0 = até ao fim.' : '' }))}
-        ${row('', fld('γ', `terreno.camadas.${i}.gamma`, { u: 'kN/m³' }), fld('γsat', `terreno.camadas.${i}.gammaSat`, { u: 'kN/m³' }))}
-        ${row('r3', fld("φ'", `terreno.camadas.${i}.phi`, { u: '°' }), fld("c'", `terreno.camadas.${i}.c`, { u: 'kPa' }), fld('cu', `terreno.camadas.${i}.cu`, { u: 'kPa' }))}
-        ${row('r3', fld('E', `terreno.camadas.${i}.E`, { u: 'MPa' }), fld('ν', `terreno.camadas.${i}.nu`), fld('σadm', `terreno.camadas.${i}.sigAdm`, { u: 'kPa' }))}
-        ${!unica ? fld('NSPT médio', `terreno.camadas.${i}.spt`, { hint: 'Informativo (relatório geotécnico).' }) : ''}
-      </div>`).join('');
+        ${unica ? fld('Designação', `terreno.camadas.${i}.nome`, { k: 'str' }) : row('', fld('Designação', `terreno.camadas.${i}.nome`, { k: 'str' }), fld('Espessura', `terreno.camadas.${i}.esp`, { u: 'm', hint: i === S.terreno.camadas.length - 1 ? 'Última camada: 0 = até ao fim.' : '' }))}
+        ${fld('Comportamento', `terreno.camadas.${i}.comport`, { opts: [['drenado', 'Drenado'], ['naodrenado', 'Não drenado']], r: true,
+          hint: nd ? 'Solos finos (argilas, siltes argilosos, lodos): verifica a curto prazo, não drenado (cu), e a longo prazo, drenado (φ\', c\'), como exige o EC7 6.5.2.2(2).' : 'Solos granulares (areias, saibros, cascalheiras): verificação drenada (φ\', c\').' })}
+        ${comNF ? row('', fld('γ', `terreno.camadas.${i}.gamma`, { u: 'kN/m³' }), fld('γsat', `terreno.camadas.${i}.gammaSat`, { u: 'kN/m³' })) : fld('γ', `terreno.camadas.${i}.gamma`, { u: 'kN/m³' })}
+        <div class="note err" id="gamaErr_${i}" role="alert" ${gamaErro(c) ? '' : 'hidden'}>${MSG_GAMA}</div>
+        ${nd ? row('r3', fld("φ'", `terreno.camadas.${i}.phi`, { u: '°' }), fld("c'", `terreno.camadas.${i}.c`, { u: 'kPa' }), fld('cu', `terreno.camadas.${i}.cu`, { u: 'kPa' }))
+             : row('', fld("φ'", `terreno.camadas.${i}.phi`, { u: '°' }), fld("c'", `terreno.camadas.${i}.c`, { u: 'kPa' }))}
+        ${row(comOed ? 'r3' : '', fld('σadm', `terreno.camadas.${i}.sigAdm`, { u: 'kPa', hint: semSA ? 'Não usado nesta análise.' : '' }), fld('E', `terreno.camadas.${i}.E`, { u: 'MPa', hint: semAss ? 'Não usado nesta análise.' : '' }), comOed ? fld('ν', `terreno.camadas.${i}.nu`) : '')}
+        ${fld('NSPT médio', `terreno.camadas.${i}.spt`, { hint: 'Opcional: por agora só informativo (aparece na memória de cálculo).' })}
+      </div>`;
+      }).join('');
       return `<fieldset><legend>Perfil</legend>${seg('terreno.modo', [['unica', 'Camada única'], ['multi', 'Multicamada']])}</fieldset>
       ${cams}
       ${!unica ? `<button class="btn" type="button" data-act="addCam">+ Adicionar camada</button>` : ''}
-      <p class="hint">cu = 0 dispensa a verificação não drenada; φ' = c' = 0 dispensa a drenada. A σadm usada é a da camada onde assenta a base.</p>
+      <p class="hint">A σadm e o comportamento usados nas verificações são os da camada onde assenta a base.</p>
       <fieldset><legend>Nível freático</legend>
         ${chk('Considerar nível freático', 'terreno.nf.considerar', { r: true })}
         ${S.terreno.nf.considerar ? fld('Profundidade abaixo do terreno final', 'terreno.nf.prof', { u: 'm' }) : ''}
@@ -359,7 +411,7 @@
   function painelResultados() {
     if (calcErro) return `<div class="note warn">Erro no cálculo: ${esc(calcErro)}</div>`;
     if (!R) return '<p>A calcular…</p>';
-    const grupos = ['Geotecnia', 'ELS', 'Estrutural', 'Pormenorização'];
+    const grupos = ['Dados', 'Geotecnia', 'ELS', 'Estrutural', 'Pormenorização'];
     const falhas = R.checks.filter(c => !c.ok && !c.aviso);
     let h = `<div class="summary ${R.ok ? 'ok' : 'bad'}"><span class="big">${R.ok ? 'Verifica' : 'Não verifica'}</span>
       <span class="sub">${R.checks.length} verificações · ${R.combos.length} combinações · η máx = ${f(R.etaMax, 2)}${falhas.length ? ' · ' + falhas.length + ' falha(s)' : ''}</span></div>`;
@@ -425,6 +477,9 @@
     }
     set(S, p, v);
     guardarLocal();
+    const mg = p.match(/^terreno\.camadas\.(\d+)\.gamma/);
+    if (mg) validarGama(+mg[1]);
+    atualizarInfo();
     agendar();
   }
   function onChange(e) {
@@ -464,7 +519,7 @@
     centrar() { if (S.pilares.length === 1) { S.pilares[0].x = 0; S.pilares[0].y = 0; } },
     grid2() { distribuir(2); },
     grid4() { distribuir(4); },
-    addCam() { S.terreno.camadas.push({ nome: 'Camada ' + (S.terreno.camadas.length + 1), esp: 0, gamma: 19, gammaSat: 20, phi: 30, c: 0, cu: 0, E: 30, nu: 0.3, sigAdm: 250, spt: 0 }); const n = S.terreno.camadas.length; if (+S.terreno.camadas[n - 2].esp <= 0) S.terreno.camadas[n - 2].esp = 2; },
+    addCam() { S.terreno.camadas.push({ nome: 'Camada ' + (S.terreno.camadas.length + 1), comport: 'drenado', esp: 0, gamma: 19, gammaSat: 20, phi: 30, c: 0, cu: 0, E: 30, nu: 0.3, sigAdm: 250, spt: 0 }); const n = S.terreno.camadas.length; if (+S.terreno.camadas[n - 2].esp <= 0) S.terreno.camadas[n - 2].esp = 2; },
     delCam(i) { S.terreno.camadas.splice(i, 1); },
     addAcao() { const id = 'a' + Date.now().toString(36); const val = {}; for (const p of S.pilares) val[p.id] = { N: 0, Mx: 0, My: 0, Vx: 0, Vy: 0 }; S.cargas.carac.acoes.push({ id, nome: 'Q' + (S.cargas.carac.acoes.length), tipo: 'Q', cat: 'A', psi0: 0.7, psi1: 0.5, psi2: 0.3, val }); },
     delAcao(i) { S.cargas.carac.acoes.splice(i, 1); },
@@ -472,7 +527,8 @@
     delLinha(i) { S.cargas.comb.linhas.splice(i, 1); },
     limparLinhas() { S.cargas.comb.linhas = []; },
     colar() { colarTabela(); return false; },
-    relatorio() { abrirRelatorio(); return false; }
+    relatorio() { abrirRelatorio(); return false; },
+    retomar() { if (anterior) { S = anterior; anterior = null; ui.check = null; ui.combId = null; recalcular(); } }
   };
   function distribuir(n) {
     const ax = parseNum(ui.ui_ax !== undefined ? ui.ui_ax : '1') || 1;
@@ -568,11 +624,8 @@
       ui.combId = gov && gov.comb ? gov.comb.id : (R.combos[0] && R.combos[0].id);
     }
     renderStatus(); renderSteps(); renderStage();
-    if (ui.step === 'resultados' || ui.step === 'geometria' || ui.step === 'materiais') {
-      const a = document.activeElement;
-      if (!(a && a.closest && a.closest('#panelBody') && a.tagName !== 'BUTTON')) renderPanel();
-      else if (ui.step === 'resultados') renderPanel();
-    }
+    if (ui.step === 'resultados') renderPanel();
+    else atualizarInfo();
   }
   function renderStatus() {
     const el = $('#statusPill');
@@ -902,8 +955,8 @@
     const rOf = (c) => c && c.comb ? R.porComb.find(r => r.comb.id === c.comb.id) : null;
     const H = [];
     H.push(`<div class="report">
-      <div class="rhead"><img class="logo-img" src="logo_color.png" alt="BO Engenharia" onerror="this.outerHTML='<div class=&quot;logo&quot;>BO</div>'"><div><h1>Sapata ${esc(p.ref || '')} — memória de cálculo</h1><div>Verificação geotécnica e estrutural de sapata isolada</div></div><div class="mono" style="text-align:right;font-size:11px">${esc(p.data || '')}<br>v0.1</div></div>
-      <div class="meta"><div><span>Obra:</span> ${esc(p.obra)}</div><div><span>Dono de obra:</span> ${esc(p.cliente)}</div><div><span>Local:</span> ${esc(p.local)}</div><div><span>Autor:</span> ${esc(p.autor)}</div><div><span>Referência:</span> ${esc(p.ref)}</div><div><span>Verificado por:</span> ${esc(p.verificador)}</div></div>
+      <div class="rhead"><img class="logo-img" src="logo_color.png" alt="BO Engenharia" onerror="this.outerHTML='<div class=&quot;logo&quot;>BO</div>'"><div><h1>Sapata${p.ref ? ' ' + esc(p.ref) : ''} — memória de cálculo</h1><div>Verificação geotécnica e estrutural de sapata isolada</div></div><div class="mono" style="text-align:right;font-size:11px">${esc(p.data || '')}<br>v0.1</div></div>
+      <div class="meta"><div><span>Projeto / Obra:</span> ${esc(p.obra)}</div><div><span>Requerente:</span> ${esc(p.cliente)}</div><div><span>Morada:</span> ${esc(p.local)}</div><div><span>Autor:</span> ${esc(p.autor)}</div><div><span>Referência:</span> ${esc(p.ref)}</div><div><span>Verificado por:</span> ${esc(p.verificador)}</div></div>
       ${p.notas ? `<p style="margin-top:8px"><i>${esc(p.notas)}</i></p>` : ''}`);
 
     H.push(`<h2>1. Normas e pressupostos</h2>
@@ -931,8 +984,8 @@
 
     const cams = C.camadasLista(S);
     H.push(`<h2>4. Terreno</h2>
-      <table><tr><th>Camada</th><th>Topo</th><th>Base</th><th>γ / γsat</th><th>φ'</th><th>c'</th><th>cu</th><th>E</th><th>ν</th><th>σadm</th><th>NSPT</th></tr>
-      ${cams.map(L => `<tr><td>${esc(L.c.nome)}</td><td class="mono">${f(L.topo, 2)}</td><td class="mono">${isFinite(L.base) ? f(L.base, 2) : '—'}</td><td class="mono">${f(+L.c.gamma, 1)} / ${f(+L.c.gammaSat, 1)}</td><td class="mono">${f(+L.c.phi, 1)}°</td><td class="mono">${f(+L.c.c, 1)}</td><td class="mono">${f(+L.c.cu, 1)}</td><td class="mono">${f(+L.c.E, 1)}</td><td class="mono">${f(+L.c.nu, 2)}</td><td class="mono">${f(+L.c.sigAdm, 0)}</td><td class="mono">${+L.c.spt ? f(+L.c.spt, 0) : '—'}</td></tr>`).join('')}</table>
+      <table><tr><th>Camada</th><th>Comport.</th><th>Topo</th><th>Base</th><th>γ / γsat</th><th>φ'</th><th>c'</th><th>cu</th><th>E</th><th>ν</th><th>σadm</th><th>NSPT</th></tr>
+      ${cams.map(L => `<tr><td>${esc(L.c.nome)}</td><td>${L.c.comport === 'naodrenado' ? 'Não drenado' : 'Drenado'}</td><td class="mono">${f(L.topo, 2)}</td><td class="mono">${isFinite(L.base) ? f(L.base, 2) : '—'}</td><td class="mono">${f(+L.c.gamma, 1)} / ${f(+L.c.gammaSat, 1)}</td><td class="mono">${f(+L.c.phi, 1)}°</td><td class="mono">${f(+L.c.c, 1)}</td><td class="mono">${L.c.comport === 'naodrenado' ? f(+L.c.cu, 1) : '—'}</td><td class="mono">${f(+L.c.E, 1)}</td><td class="mono">${f(+L.c.nu, 2)}</td><td class="mono">${f(+L.c.sigAdm, 0)}</td><td class="mono">${+L.c.spt ? f(+L.c.spt, 0) : '—'}</td></tr>`).join('')}</table>
       <p>Nível freático: ${isFinite(g.dw) ? 'à profundidade de ' + f(g.dw, 2) + ' m' : 'não considerado'}. Unidades: m, kN/m³, °, kPa, MPa.</p>`);
 
     // ações
@@ -1045,10 +1098,10 @@ vEd = ${f(cp.val, 3)} MPa ≤ vRd = ${f(cp.lim, 3)} MPa  →  η = ${f(cp.eta, 3
       H.push(`<p><b>Amarração ${dir.toUpperCase()} (9.8.2.2):</b> Fs = R·ze/zi; ${esc(c.info)}; lbd = ${f(c.val, 0)} mm ≤ disponível ${f(c.lim, 0)} mm → ${okTxt(c)}</p>`);
     }
     H.push(`<h3>8.${k8++} Disposições construtivas</h3><table><tr><th>Verificação</th><th>Valor</th><th>Limite</th><th>Estado</th></tr>
-      ${['phimin', 'smax', 'smin', ...g.pil.map(q => 'arr-' + q.id)].map(chk).filter(Boolean).map(c => `<tr><td>${esc(c.nome)}<br><small>${esc(c.info || c.ref)}</small></td><td class="mono">${fmtVal(c.val, c.un)}</td><td class="mono">${fmtVal(c.lim, c.un)}</td><td>${okTxt(c)}</td></tr>`).join('')}</table>`);
+      ${['phimin', 'smax', 'smin', ...g.pil.flatMap(q => ['arr-' + q.id, 'arrT-' + q.id])].map(chk).filter(Boolean).map(c => `<tr><td>${esc(c.nome)}<br><small>${esc(c.info || c.ref)}</small></td><td class="mono">${fmtVal(c.val, c.un)}</td><td class="mono">${fmtVal(c.lim, c.un)}</td><td>${okTxt(c)}</td></tr>`).join('')}</table>`);
 
     if (R.avisos.length) H.push(`<h2>9. Avisos</h2><ul>${R.avisos.map(a => `<li>${esc(a)}</li>`).join('')}</ul>`);
-    H.push(`<div class="disc">Memória gerada pela ferramenta “Sapatas” (Webapps-BO, v0.1) em ${new Date().toLocaleString('pt-PT')}. Ferramenta de apoio ao projeto: os resultados devem ser verificados pelo técnico responsável, que assume a responsabilidade pelo dimensionamento.</div></div>`);
+    H.push(`<div class="disc">Memória gerada pela ferramenta “Sapatas” (Webapps-BO, v0.1) em ${new Date().toLocaleString('pt-PT')}. Este software é uma ferramenta auxiliar de cálculo e não substitui a validação técnica e o julgamento profissional de um engenheiro qualificado. O utilizador assume total responsabilidade pelo uso e verificação independente dos resultados.</div></div>`);
     return H.join('');
   }
   function svgPlantaReport(r) {
