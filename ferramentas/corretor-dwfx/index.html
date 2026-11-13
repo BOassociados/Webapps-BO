@@ -197,12 +197,38 @@
             color: var(--text-dim);
             min-height: 18px;
         }
+        /* Zona de largar em ecrã inteiro (aparece ao arrastar ficheiros para a janela) */
+        .drop-overlay{
+            position: fixed;
+            inset: 12px;
+            z-index: 50;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            border: 2px dashed var(--blue);
+            border-radius: 10px;
+            background: var(--drag-bg);
+            backdrop-filter: blur(2px);
+            pointer-events: none;
+        }
+        .drop-overlay.visivel{ display: flex; }
+        .drop-overlay span{
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 600;
+            font-size: 18px;
+            color: var(--text);
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 14px 22px;
+        }
     </style>
 </head>
 <body>
 
 <a href="../../index.html" class="back-link">← Voltar às ferramentas</a>
 <div class="tema-fixo"><button type="button" data-tema-toggle></button></div>
+<div class="drop-overlay" id="dropOverlay" aria-hidden="true"><span>📂 Largue o ficheiro .dwfx</span></div>
 
 <div class="container">
     <div class="eyebrow">Geral · Autodesk</div>
@@ -211,7 +237,7 @@
 
     <input type="file" id="fileInput" accept=".dwfx" style="display: none;">
     <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click();">
-        📂 Clique ou arraste o ficheiro .dwfx para aqui
+        📂 Clique aqui ou arraste o ficheiro .dwfx para a página
     </div>
 
     <div class="options">
@@ -266,23 +292,37 @@
         handleFile(e.target.files[0]);
     });
 
-    // Eventos Drag & Drop
-    dropZone.addEventListener('dragover', (e) => {
+    // Arrastar em qualquer ponto da página (não só na caixa).
+    const dropOverlay = document.getElementById('dropOverlay');
+    let arrastos = 0;
+    const temFicheiros = (e) => !!e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files');
+    function fimArrasto() {
+        arrastos = 0;
+        dropOverlay.classList.remove('visivel');
+        dropZone.classList.remove('dragover');
+    }
+    window.addEventListener('dragenter', (e) => {
+        if (!temFicheiros(e)) return;
         e.preventDefault();
+        arrastos++;
+        dropOverlay.classList.add('visivel');
         dropZone.classList.add('dragover');
     });
-
-    dropZone.addEventListener('dragleave', (e) => {
+    window.addEventListener('dragover', (e) => {
+        if (!temFicheiros(e)) return;
         e.preventDefault();
-        dropZone.classList.remove('dragover');
+        e.dataTransfer.dropEffect = 'copy';
     });
-
-    dropZone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        dropZone.classList.remove('dragover');
-        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-            handleFile(e.dataTransfer.files[0]);
-        }
+    window.addEventListener('dragleave', (e) => {
+        if (!temFicheiros(e)) return;
+        arrastos = Math.max(0, arrastos - 1);
+        if (arrastos === 0) fimArrasto();
+    });
+    window.addEventListener('drop', (e) => {
+        if (!temFicheiros(e)) return;
+        e.preventDefault();                       // impede o browser de abrir o ficheiro
+        fimArrasto();
+        if (e.dataTransfer.files && e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
     });
 
     processBtn.addEventListener('click', async () => {
