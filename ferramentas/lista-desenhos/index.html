@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Lista de Desenhos | BO Associados</title>
+    <script src="../../tema.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        /* Layout: cartão de entrada centrado, dois painéis de resultado por baixo. Escuro por defeito (paleta BO). */
+        :root{
+            --bg: #12151a;
+            --panel: #181c22;
+            --panel-hover: #1e232b;
+            --border: #2a2f38;
+            --border-soft: #23272f;
+            --text: #e9e7e2;
+            --text-dim: #9aa1ac;
+            --text-faint: #5c636e;
+            --blue: #6f9cf3;
+            --blue-dim: #3d5a94;
+            --green: #6fcf97;
+            --warn: #e3b55f;
+            --btn-ink: #0e1116;
+            --btn-hover: #85aaf5;
+            --drag-bg: rgba(111,156,243,0.08);
+            color-scheme: dark;
+        }
+        /* Tema claro — paleta comum às ferramentas BO (ver tema.js) */
+        :root[data-theme="light"]{
+            --bg: #eef0ee; --panel: #ffffff; --panel-hover: #f5f6f4; --border: #d4d9d6; --border-soft: #e3e7e4;
+            --text: #1a1f22; --text-dim: #4f585e; --text-faint: #858d92; --blue: #4b7a77; --blue-dim: #a9c1bf;
+            --green: #2f8a57; --warn: #9a6200; --btn-ink: #ffffff; --btn-hover: #3d6764; --drag-bg: rgba(75,122,119,0.10);
+            color-scheme: light;
+        }
+
+        *{ box-sizing: border-box; margin:0; padding:0; }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            margin: 0;
+            padding-block: 72px 48px;
+            padding-left: max(16px, env(safe-area-inset-left, 0px));
+            padding-right: max(16px, env(safe-area-inset-right, 0px));
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .back-link{
+            position: fixed;
+            top: calc(24px + env(safe-area-inset-top, 0px));
+            left: max(16px, env(safe-area-inset-left, 0px));
+            font-size: 13.5px;
+            color: var(--text-dim);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .back-link:hover{ color: var(--text); }
+
+        .tema-fixo{
+            position: fixed;
+            top: calc(18px + env(safe-area-inset-top, 0px));
+            right: max(16px, env(safe-area-inset-right, 0px));
+            z-index: 10;
+        }
+        /* O interruptor de tema é desenhado pelo tema.js partilhado. */
+        button:focus-visible, .drop-zone:focus-visible{ outline: 2px solid var(--blue); outline-offset: 2px; }
+
+        .container {
+            background: var(--panel);
+            border: 1px solid var(--border-soft);
+            padding: 40px;
+            border-radius: 8px;
+            text-align: center;
+            max-width: 550px;
+            width: 100%;
+        }
+
+        .eyebrow{
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 11px;
+            color: var(--blue);
+            letter-spacing: 0.02em;
+            margin-bottom: 10px;
+        }
+
+        h2 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 600;
+            font-size: 22px;
+            color: var(--text);
+            margin-bottom: 6px;
+        }
+
+        p.desc {
+            color: var(--text-dim);
+            margin-bottom: 28px;
+            font-size: 14px;
+        }
+
+        .drop-zone {
+            border: 1.5px dashed var(--border);
+            padding: 40px;
+            border-radius: 6px;
+            background: var(--bg);
+            cursor: pointer;
+            margin-bottom: 20px;
+            transition: 0.2s;
+            font-weight: 500;
+            color: var(--text-dim);
+            font-size: 14.5px;
+        }
+        .drop-zone:hover {
+            background: var(--panel-hover);
+            border-color: var(--blue-dim);
+            color: var(--text);
+        }
+        .drop-zone.dragover {
+            background: var(--drag-bg);
+            border-color: var(--blue);
+            color: var(--text);
+        }
+
+        .options {
+            text-align: left;
+            background: var(--bg);
+            padding: 16px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-soft);
+        }
+        .options label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            color: var(--text-dim);
+        }
+        .opc-tit{
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 11px;
+            letter-spacing: 0.02em;
+            color: var(--text-faint);
+            margin-bottom: 12px;
+        }
+        .options label + label{ margin-top: 10px; }
+        .options label{ cursor: pointer; }
+        .options input[type="checkbox"]{ accent-color: var(--blue); width: 15px; height: 15px; flex-shrink: 0; }
+        [hidden]{ display: none !important; }
+        .options input[type="number"]{
+            width: 64px;
+            background: var(--panel);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 5px 8px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 13px;
+        }
+        .options input[type="number"]:focus{ outline: none; border-color: var(--blue); }
+
+        button {
+            background: var(--blue);
+            color: var(--btn-ink);
+            border: none;
+            padding: 14px 28px;
+            font-size: 14.5px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+            transition: 0.15s;
+        }
+        button:hover { background: var(--btn-hover); }
+        button:disabled {
+            background: var(--border);
+            color: var(--text-faint);
+            cursor: not-allowed;
+        }
+
+        #status {
+            margin-top: 16px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 12.5px;
+            color: var(--text-dim);
+            min-height: 18px;
+        }
+        #status.erro{ color: var(--warn); }
+
+        /* ---------- Resultados ---------- */
+        #resultados{
+            display: none;
+            width: 100%;
+            max-width: 960px;
+            margin-top: 24px;
+            flex-direction: column;
+            gap: 24px;
+        }
+        #resultados.visivel{ display: flex; }
+
+        .painel{
+            min-width: 0;
+            background: var(--panel);
+            border: 1px solid var(--border-soft);
+            border-radius: 8px;
+            padding: 28px 32px 32px;
+        }
+        .painel-cab{
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin-bottom: 18px;
+        }
+        .painel h3{
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 600;
+            font-size: 18px;
+            color: var(--text);
+            margin-top: 2px;
+        }
+        .painel .eyebrow{ margin-bottom: 4px; }
+        .acoes{ display: flex; gap: 8px; flex-wrap: wrap; }
+        button.btn-sm{
+            width: auto;
+            padding: 9px 16px;
+            font-size: 13px;
+        }
+
+        .aviso{
+            display: none;
+            border: 1px solid var(--warn);
+            color: var(--warn);
+            border-radius: 6px;
+            padding: 10px 14px;
+            font-size: 13.5px;
+            margin-bottom: 16px;
+        }
+        .aviso.visivel{ display: block; }
+
+        .resumo{
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 12px;
+            color: var(--text-dim);
+            margin-bottom: 14px;
+        }
+        .resumo b{ color: var(--green); font-weight: 500; }
+
+        .scroll{
+            max-height: 440px;
+            overflow: auto;
+            border: 1px solid var(--border-soft);
+            border-radius: 6px;
+            background: var(--bg);
+        }
+        table.prev{
+            width: 100%;
+            min-width: 520px;
+            border-collapse: collapse;
+            font-size: 12.5px;
+            color: var(--text);
+        }
+        table.prev th{
+            position: sticky;
+            top: 0;
+            background: var(--panel);
+            font-family: 'IBM Plex Mono', monospace;
+            font-weight: 500;
+            font-size: 11px;
+            letter-spacing: 0.02em;
+            color: var(--text-dim);
+            text-align: left;
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--border);
+        }
+        table.prev td{
+            padding: 4px 12px;
+            height: 26px;
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+        table.prev td.dir{ text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--text-dim); }
+        table.prev td.cod{ font-family: 'IBM Plex Mono', monospace; font-size: 12px; }
+        table.prev tr.novo td{ border-top: 1px solid var(--border); }
+        table.prev tr.rev1 td{ border-top: 1px solid var(--border-soft); }
+        table.prev tr.cab td{ font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 13.5px; }
+        table.prev tr.cab td.dir{ font-size: 12px; font-weight: 500; }
+
+        @media (max-width: 600px){
+            .container, .painel{ padding: 24px 18px; }
+        }
+    </style>
+</head>
+<body>
+
+<a href="../../index.html" class="back-link">← Voltar às ferramentas</a>
+<div class="tema-fixo"><button type="button" data-tema-toggle></button></div>
+
+<div class="container">
+    <div class="eyebrow">Geral · AutoCAD</div>
+    <h2>Lista de Desenhos</h2>
+    <p class="desc">Lista para Word e Índice para CAD a partir da exportação ATTOUT</p>
+
+    <input type="file" id="fileInput" accept=".txt" style="display: none;">
+    <div class="drop-zone" id="dropZone" tabindex="0" role="button" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();document.getElementById('fileInput').click();}" onclick="document.getElementById('fileInput').click();">
+        📂 Clique ou arraste o ficheiro .txt do ATTOUT para aqui
+    </div>
+
+    <div class="options">
+        <div class="opc-tit">O que pretende gerar?</div>
+        <label>
+            <input type="checkbox" id="chkWord" checked>
+            Lista de desenhos para Word
+        </label>
+        <label>
+            <input type="checkbox" id="chkCad" checked>
+            Índice para AutoCAD (DXF)
+        </label>
+        <label id="lblMax">
+            <input type="number" id="maxLinhas" value="32" min="1" max="500">
+            Máximo de linhas do índice no CAD (aviso se exceder)
+        </label>
+    </div>
+
+    <button id="processBtn" disabled>Gerar Listas</button>
+    <div id="status"></div>
+</div>
+
+<div id="resultados">
+
+    <section class="painel" id="painelLista">
+        <div class="painel-cab">
+            <div>
+                <div class="eyebrow">Saída 1 · Word</div>
+                <h3>Lista de Peças Desenhadas</h3>
+            </div>
+            <div class="acoes">
+                <button type="button" class="btn-sm" id="btnCopiarWord">Copiar para Word</button>
+            </div>
+        </div>
+        <div class="resumo" id="resumoLista"></div>
+        <div class="scroll"><table class="prev" id="tabLista"></table></div>
+    </section>
+
+    <section class="painel" id="painelIndice">
+        <div class="painel-cab">
+            <div>
+                <div class="eyebrow">Saída 2 · AutoCAD</div>
+                <h3>Índice</h3>
+            </div>
+            <div class="acoes">
+                <button type="button" class="btn-sm" id="btnDxf">Guardar DXF</button>
+            </div>
+        </div>
+        <div class="aviso" id="avisoIndice"></div>
+        <div class="resumo" id="resumoIndice"></div>
+        <div class="scroll"><table class="prev" id="tabIndice"></table></div>
+    </section>
+
+</div>
+
+<script>
+/* =====================================================================
+   Lista de Desenhos — equivalente à macro Excel "Auto_Open" (ATTOUT)
+   ===================================================================== */
+const fileInput  = document.getElementById('fileInput');
+const processBtn = document.getElementById('processBtn');
+const statusDiv  = document.getElementById('status');
+const dropZone   = document.getElementById('dropZone');
+let selectedFile = null;
+let ultimo = null;
+const chkWord = document.getElementById('chkWord');
+const chkCad  = document.getElementById('chkCad');
+function atualizaBtn() {
+    processBtn.disabled = !selectedFile || !(chkWord.checked || chkCad.checked);
+}
+function atualizaOpcoes() {
+    document.getElementById('lblMax').hidden = !chkCad.checked;
+    atualizaBtn();
+    if (selectedFile && !(chkWord.checked || chkCad.checked)) setStatus('Selecione pelo menos uma saída: Word ou AutoCAD.', true);
+    else if (selectedFile) setStatus(`Ficheiro: ${selectedFile.name}`);
+}
+chkWord.addEventListener('change', atualizaOpcoes);
+chkCad.addEventListener('change', atualizaOpcoes);       // { nome, rows lista, rows índice, ... }
+
+/* ---------- Ficheiro ---------- */
+function handleFile(file) {
+    if (file && file.name.toLowerCase().endsWith('.txt')) {
+        selectedFile = file;
+        setStatus(`Ficheiro: ${file.name}`);
+        atualizaBtn();
+    } else {
+        setStatus('Por favor, selecione ou arraste um ficheiro .txt válido.', true);
+        selectedFile = null;
+        atualizaBtn();
+    }
+}
+function setStatus(msg, erro) {
+    statusDiv.innerText = msg;
+    statusDiv.classList.toggle('erro', !!erro);
+}
+
+fileInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
+dropZone.addEventListener('dragover',  (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); });
+dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) handleFile(e.dataTransfer.files[0]);
+});
+
+processBtn.addEventListener('click', async () => {
+    if (!selectedFile || !(chkWord.checked || chkCad.checked)) return;
+    setStatus('A processar, por favor aguarde...');
+    processBtn.disabled = true;
+    try {
+        const buf = await selectedFile.arrayBuffer();
+        const recs = parseAttout(buf);
+        if (!recs.length) throw new Error('Não foram encontradas linhas "RotuloBO" no ficheiro.');
+        const lista  = construirLista(recs);
+        const indice = construirIndice(recs);
+        ultimo = { nome: selectedFile.name.replace(/\.txt$/i, ''), recs, lista, indice, word: chkWord.checked, cad: chkCad.checked };
+        mostrarResultados();
+        setStatus(`Sucesso! ${recs.length} desenhos processados.`);
+    } catch (err) {
+        console.error(err);
+        setStatus(err.message || 'Erro ao processar o ficheiro.', true);
+    }
+    atualizaBtn();
+});
+
+/* ---------- Leitura do ATTOUT ---------- */
+// Normaliza nomes de colunas (sem acentos/símbolos) — resiste a erros de codificação.
+function norm(s) {
+    return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+function descodificar(buf) {
+    try { return new TextDecoder('utf-8', { fatal: true }).decode(buf); }
+    catch (e) { return new TextDecoder('windows-1252').decode(buf); }
+}
+function limpaCampo(v) {
+    if (v === undefined) return '';
+    v = v.trim();
+    if (v.length >= 2 && v[0] === '"' && v[v.length - 1] === '"') v = v.slice(1, -1).replace(/""/g, '"').trim();
+    return v;
+}
+
+function parseAttout(buf) {
+    const texto = descodificar(buf).replace(/^﻿/, '');
+    const linhas = texto.split(/\r\n|\n|\r/);
+    const cab = linhas[0].split('\t').map(norm);
+    const col = (nome) => cab.indexOf(nome);
+    const colIni = (pref) => cab.findIndex(c => c.startsWith(pref));
+
+    const idx = {
+        esp: col('ESPECIALIDADEN'), sub: col('SUBESPECIALIDADEN'),
+        tipo: col('TIPODESENHO'), ord: col('NORDEM'), rev: col('REVISAO'),
+        proj: col('NPROJETO'), fase: col('FASE'),
+        t: [1, 2, 3, 4].map(n => col('TITULO' + n))
+    };
+    const obrig = { 'ESPECIALIDADE_Nº': idx.esp, 'SUBESPECIALIDADE_Nº': idx.sub, 'TIPO_DESENHO': idx.tipo,
+                    'Nº_ORDEM': idx.ord, 'REVISÃO': idx.rev, 'Nº_PROJETO': idx.proj, 'FASE': idx.fase, 'TITULO1': idx.t[0] };
+    const falta = Object.keys(obrig).filter(k => obrig[k] < 0);
+    if (falta.length) throw new Error('Colunas em falta no ficheiro: ' + falta.join(', '));
+
+    const revCols = [];
+    for (let k = 0; k < 12; k++) {
+        const n = String(k).padStart(2, '0');
+        revCols.push({ r: col('R' + n), d: col('R' + n + 'DATA'), s: colIni('R' + n + 'DESCRI') });
+    }
+
+    const recs = [];
+    for (const linha of linhas.slice(1)) {
+        if (!/RotuloBO/i.test(linha)) continue;           // só blocos RotuloBO
+        const c = linha.split('\t');
+        const f = (i) => (i < 0 ? '' : limpaCampo(c[i]));
+        recs.push({
+            esp: f(idx.esp), sub: f(idx.sub), tipo: f(idx.tipo), ord: f(idx.ord), rev: f(idx.rev),
+            proj: f(idx.proj), fase: f(idx.fase),
+            titulos: idx.t.map(f),
+            revs: revCols.map(rc => ({ r: f(rc.r), data: formataData(f(rc.d)), desc: f(rc.s) }))
+        });
+    }
+
+    // Ordenar por ESPECIALIDADE_Nº, SUBESPECIALIDADE_Nº, TIPO_DESENHO, Nº_ORDEM (como no Excel)
+    const chaves = ['esp', 'sub', 'tipo', 'ord'];
+    recs.sort((a, b) => {
+        for (const k of chaves) {
+            const r = cmp(a[k], b[k]);
+            if (r) return r;
+        }
+        return 0;
+    });
+    return recs;
+}
+function cmp(a, b) {
+    const na = /^\d+(\.\d+)?$/.test(a), nb = /^\d+(\.\d+)?$/.test(b);
+    if (na && nb) return parseFloat(a) - parseFloat(b);
+    if (na) return -1;            // números antes de texto (ordem do Excel)
+    if (nb) return 1;
+    return a.localeCompare(b, 'pt');
+}
+function formataData(s) {
+    if (!s) return '';
+    let m = s.match(/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})$/);
+    if (m) return `${m[3].padStart(2, '0')}/${m[2].padStart(2, '0')}/${m[1]}`;
+    m = s.match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4})$/);
+    if (m) return `${m[1].padStart(2, '0')}/${m[2].padStart(2, '0')}/${m[3]}`;
+    return s;
+}
+
+/* ---------- Nº de desenho ---------- */
+function pad2(v) {
+    if (/^\d+$/.test(v)) { const n = parseInt(v, 10); return n < 10 ? '0' + n : String(n); }
+    return v;
+}
+function numDesenho(r, comRev) {
+    const base = [r.proj, r.fase, pad2(r.esp), pad2(r.sub), pad2(r.tipo), pad2(r.ord)];
+    if (comRev) base.push(r.rev);
+    return base.join('.');
+}
+
+/* ---------- Lista (Word): 4 linhas de título + 12 de revisões por desenho ---------- */
+function construirLista(recs) {
+    const rows = [];
+    recs.forEach((r) => {
+        let primeiro = true, primeiraRev = true;
+        r.titulos.forEach((t, k) => {
+            if (k > 0 && !t) return;                       // linhas vazias ficam ocultas (filtro "ativo")
+            rows.push({ tipo: 'titulo', cod: k === 0 ? numDesenho(r, false) : '', data: '', desc: t, novo: primeiro });
+            primeiro = false;
+        });
+        r.revs.forEach((v) => {
+            if (!v.desc) return;
+            rows.push({ tipo: 'rev', cod: v.r, data: v.data, desc: v.desc, rev1: primeiraRev });
+            primeiraRev = false;
+        });
+    });
+    return rows;
+}
+
+/* ---------- Índice (CAD): 4 linhas por desenho + INDICE + LISTA DE LAYERS ---------- */
+function construirIndice(recs) {
+    const blocos = [];
+    recs.forEach((r, i) => {
+        const titulos = r.titulos.filter((t, k) => k === 0 || t);
+        blocos.push({ cod: numDesenho(r, true), titulos, pagina: i + 2 });
+    });
+    const linhas = blocos.reduce((s, b) => s + b.titulos.length, 0) + 2;
+    return { blocos, paginaLayers: recs.length + 2, linhas };
+}
+
+/* ---------- Apresentação ---------- */
+const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+function mostrarResultados() {
+    const { lista, indice, recs } = ultimo;
+
+    // Lista
+    let h = '<thead><tr><th colspan="2">Nº Desenho</th><th>Descrição</th></tr></thead><tbody>';
+    lista.forEach((r) => {
+        const cls = r.tipo === 'titulo' ? (r.novo ? 'novo' : '') : (r.rev1 ? 'rev1' : '');
+        if (r.tipo === 'titulo') h += `<tr class="${cls}"><td class="cod" colspan="2">${esc(r.cod)}</td><td>${esc(r.desc)}</td></tr>`;
+        else h += `<tr class="${cls}"><td class="cod">${esc(r.cod)}</td><td class="dir">${esc(r.data)}</td><td>${esc(r.desc)}</td></tr>`;
+    });
+    document.getElementById('tabLista').innerHTML = h + '</tbody>';
+    document.getElementById('resumoLista').innerHTML = `<b>${recs.length}</b> desenhos · ${lista.length} linhas`;
+
+    // Índice
+    h = '<thead><tr><th>Código</th><th>Título</th><th style="text-align:right">Pág.</th></tr></thead><tbody>';
+    h += '<tr class="cab"><td colspan="2">INDICE</td><td class="dir">1</td></tr>';
+    indice.blocos.forEach((b) => {
+        b.titulos.forEach((t, k) => {
+            h += `<tr class="${k === 0 ? 'novo' : ''}"><td class="cod">${k === 0 ? esc(b.cod) : ''}</td><td>${esc(t)}</td><td class="dir">${k === 0 ? b.pagina : ''}</td></tr>`;
+        });
+    });
+    h += `<tr class="novo"><td colspan="2">LISTA DE LAYERS</td><td class="dir">${indice.paginaLayers}</td></tr>`;
+    document.getElementById('tabIndice').innerHTML = h + '</tbody>';
+
+    const max = parseInt(document.getElementById('maxLinhas').value, 10) || 32;
+    document.getElementById('resumoIndice').innerHTML =
+        `<b>${recs.length}</b> desenhos · ${indice.linhas} linhas · páginas 1 a ${indice.paginaLayers}`;
+    const aviso = document.getElementById('avisoIndice');
+    if (indice.linhas > max) {
+        aviso.textContent = `Excede a dimensão permitida (${indice.linhas} linhas > ${max}). Atenção ao Índice no CAD.`;
+        aviso.classList.add('visivel');
+    } else aviso.classList.remove('visivel');
+
+    document.getElementById('painelLista').hidden = !ultimo.word;
+    document.getElementById('painelIndice').hidden = !ultimo.cad;
+    document.getElementById('resultados').classList.add('visivel');
+}
+
+/* ---------- Copiar para Word ---------- */
+function htmlWord(rows) {
+    const F = 'font-family:Arial,sans-serif;font-size:8.5pt;height:16.5pt;vertical-align:middle;padding:0 3pt;';
+    const PRETO = 'border-top:0.75pt solid #000000;';
+    const CINZA = 'border-top:0.75pt solid #BFBFBF;';
+    let h = '<table style="border-collapse:collapse;table-layout:fixed;width:491px">' +
+            '<colgroup><col style="width:82px"><col style="width:82px"><col style="width:327px"></colgroup>';
+    h += '<tr>' +
+         `<td colspan="2" style="font-family:Arial,sans-serif;font-size:5pt;height:16.5pt;vertical-align:middle;padding:0 3pt;border-top:0.75pt solid #000;border-bottom:0.75pt solid #000">Nº Desenho</td>` +
+         `<td style="font-family:Arial,sans-serif;font-size:5pt;height:16.5pt;vertical-align:middle;padding:0 3pt;border-top:0.75pt solid #000;border-bottom:0.75pt solid #000">Descrição</td></tr>`;
+    rows.forEach((r) => {
+        if (r.tipo === 'titulo') {
+            const b = r.novo ? PRETO : '';
+            h += `<tr><td colspan="2" style="${F}${b}">${esc(r.cod)}</td><td style="${F}${b}">${esc(r.desc)}</td></tr>`;
+        } else {
+            const b = r.rev1 ? CINZA : '';
+            h += `<tr><td style="${F}${b}">${esc(r.cod)}</td><td style="${F}${b}text-align:right">${esc(r.data)}</td><td style="${F}${b}">${esc(r.desc)}</td></tr>`;
+        }
+    });
+    return h + '</table>';
+}
+function textoLista(rows) {
+    return ['Nº Desenho\t\tDescrição'].concat(rows.map(r => `${r.cod}\t${r.data}\t${r.desc}`)).join('\r\n');
+}
+
+async function copiar(html, texto) {
+    try {
+        if (navigator.clipboard && window.ClipboardItem) {
+            await navigator.clipboard.write([new ClipboardItem({
+                'text/html':  new Blob(['<html><body><!--StartFragment-->' + html + '<!--EndFragment--></body></html>'], { type: 'text/html' }),
+                'text/plain': new Blob([texto], { type: 'text/plain' })
+            })]);
+            return true;
+        }
+    } catch (e) { /* tenta o método clássico */ }
+    const div = document.createElement('div');
+    div.contentEditable = 'true';
+    div.style.cssText = 'position:fixed;left:-9999px;top:0;';
+    div.innerHTML = html;
+    document.body.appendChild(div);
+    const sel = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(div);
+    sel.removeAllRanges();
+    sel.addRange(range);
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) {}
+    sel.removeAllRanges();
+    document.body.removeChild(div);
+    return ok;
+}
+
+document.getElementById('btnCopiarWord').addEventListener('click', async (ev) => {
+    if (!ultimo) return;
+    const btn = ev.currentTarget;
+    const ok = await copiar(htmlWord(ultimo.lista), textoLista(ultimo.lista));
+    const orig = btn.textContent;
+    btn.textContent = ok ? 'Copiado ✓' : 'Não foi possível copiar';
+    setTimeout(() => { btn.textContent = orig; }, 1800);
+});
+
+/* ---------- DXF do índice (AutoCAD) ---------- */
+// Dimensões em mm (A4, 1:1). Ajustar aqui se o modelo do CAD mudar.
+const DXF_CFG = {
+    largura: 141,        // largura total da tabela
+    alturaLinha: 5.1,    // altura de cada linha
+    xCodigo: 1,          // início da coluna "código"
+    xTitulo: 37,         // início da coluna "título"
+    xPagina: 140,        // alinhamento à direita da página
+    alturaTexto: 2.3,
+    alturaTextoCab: 3.2
+};
+
+let DXF_ASCII = false;
+function dxfTxt(s) {
+    // Ficheiro gravado em Windows-1252 (ANSI_1252): acentos ficam como bytes diretos;
+    // o que não existir nesse conjunto vai como \U+XXXX.
+    return String(s).replace(DXF_ASCII ? /[^\x20-\x7E]/g : /[^\x20-\x7E\xA0-\xFF]/g, (c) => '\\U+' + c.charCodeAt(0).toString(16).toUpperCase().padStart(4, '0'));
+}
+function dxfBytes(str) {
+    return Uint8Array.from(str, (c) => c.charCodeAt(0) & 0xFF);
+}
+const num = (n) => (Math.round(n * 1000) / 1000).toString();
+
+function gerarDxf(indice) {
+    const C = DXF_CFG;
+    const ent = [];
+    const linha = (x1, y1, x2, y2) =>
+        ent.push('0', 'LINE', '8', 'BO_INDICE_LINHAS', '10', num(x1), '20', num(y1), '30', '0', '11', num(x2), '21', num(y2), '31', '0');
+    const texto = (x, y, h, s, estilo, dir) =>
+        ent.push('0', 'TEXT', '8', 'BO_INDICE_TEXTO', '7', estilo,
+                 '10', num(x), '20', num(y), '30', '0', '40', num(h), '1', dxfTxt(s),
+                 '72', dir ? '2' : '0', '11', num(x), '21', num(y), '31', '0', '73', '2');
+
+    let y = 0;                                   // topo da linha corrente (cresce para baixo)
+    const centro = (n) => y - (n * C.alturaLinha) / 2;
+
+    // Cabeçalho: INDICE + página 1
+    texto(C.xCodigo, centro(1), C.alturaTextoCab, 'INDICE', 'BO_ARIAL_BOLD', false);
+    texto(C.xPagina, centro(1), C.alturaTexto, '1', 'BO_ARIAL', true);
+    y -= C.alturaLinha;
+    linha(0, y, C.largura, y);
+
+    indice.blocos.forEach((b) => {
+        const n = b.titulos.length;
+        texto(C.xCodigo, y - C.alturaLinha / 2, C.alturaTexto, b.cod, 'BO_ARIAL', false);
+        texto(C.xPagina, y - C.alturaLinha / 2, C.alturaTexto, String(b.pagina), 'BO_ARIAL', true);
+        b.titulos.forEach((t, k) => texto(C.xTitulo, y - C.alturaLinha * (k + 0.5), C.alturaTexto, t, 'BO_ARIAL', false));
+        y -= n * C.alturaLinha;
+        linha(0, y, C.largura, y);
+    });
+
+    texto(C.xCodigo, y - C.alturaLinha / 2, C.alturaTexto, 'LISTA DE LAYERS', 'BO_ARIAL', false);
+    texto(C.xPagina, y - C.alturaLinha / 2, C.alturaTexto, String(indice.paginaLayers), 'BO_ARIAL', true);
+    y -= C.alturaLinha;
+    linha(0, y, C.largura, y);
+
+    const estilo = (nome, ficheiro) =>
+        ['0', 'STYLE', '2', nome, '70', '0', '40', '0.0', '41', '1.0', '50', '0.0', '71', '0', '42', '2.5', '3', ficheiro, '4', ''];
+    const layer = (nome) => ['0', 'LAYER', '2', nome, '70', '0', '62', '7', '6', 'CONTINUOUS'];
+
+    const out = [
+        '0', 'SECTION', '2', 'HEADER',
+        '9', '$ACADVER', '1', 'AC1009',
+        '9', '$DWGCODEPAGE', '3', 'ANSI_1252',
+        '0', 'ENDSEC',
+        '0', 'SECTION', '2', 'TABLES',
+        '0', 'TABLE', '2', 'LTYPE', '70', '1',
+        '0', 'LTYPE', '2', 'CONTINUOUS', '70', '0', '3', 'Solid line', '72', '65', '73', '0', '40', '0.0',
+        '0', 'ENDTAB',
+        '0', 'TABLE', '2', 'LAYER', '70', '3',
+        ...layer('0'), ...layer('BO_INDICE_TEXTO'), ...layer('BO_INDICE_LINHAS'),
+        '0', 'ENDTAB',
+        '0', 'TABLE', '2', 'STYLE', '70', '2',
+        ...estilo('BO_ARIAL', 'arial.ttf'), ...estilo('BO_ARIAL_BOLD', 'arialbd.ttf'),
+        '0', 'ENDTAB',
+        '0', 'ENDSEC',
+        '0', 'SECTION', '2', 'ENTITIES',
+        ...ent,
+        '0', 'ENDSEC',
+        '0', 'EOF'
+    ];
+    return out.join('\r\n') + '\r\n';
+}
+
+// Gravação do DXF:
+//   1) no hub (GitHub Pages / browser normal) descarrega o .dxf diretamente;
+//   2) dentro de um artefacto do Claude usa a API de downloads (ZIP com o DXF);
+//   3) se nada disso for possível, copia o DXF como texto.
+let downloadsApi = null;
+(async () => {
+    try { if (window.claude && claude.use) downloadsApi = await claude.use('downloads'); } catch (e) { downloadsApi = null; }
+})();
+
+function descarregar(blob, nomeFicheiro) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = nomeFicheiro;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+
+document.getElementById('btnDxf').addEventListener('click', async (ev) => {
+    if (!ultimo) return;
+    const btn = ev.currentTarget;
+    const orig = btn.textContent;
+    const aviso = (t) => { btn.textContent = t; setTimeout(() => { btn.textContent = orig; }, 2200); };
+    const nome = `${ultimo.nome}_indice`;
+    const noClaude = !!(window.claude && claude.use);
+
+    if (!noClaude) {
+        try {
+            DXF_ASCII = false;
+            descarregar(new Blob([dxfBytes(gerarDxf(ultimo.indice))], { type: 'application/octet-stream' }), nome + '.dxf');
+            setStatus('Sucesso! DXF guardado.');
+            aviso('DXF guardado ✓');
+            return;
+        } catch (err) { console.error(err); /* tenta copiar como texto */ }
+    }
+
+    try {
+        if (noClaude && !downloadsApi) { downloadsApi = await claude.use('downloads'); }
+    } catch (e) { downloadsApi = null; }
+
+    if (downloadsApi && window.JSZip) {
+        try {
+            DXF_ASCII = false;
+            const zip = new JSZip();
+            zip.file(nome + '.dxf', dxfBytes(gerarDxf(ultimo.indice)));
+            const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+            await downloadsApi.save({ filename: nome + '.zip', data: blob });
+            setStatus('Sucesso! ZIP com o DXF guardado.');
+        } catch (err) {
+            if (err && err.code === 'declined') setStatus('Gravação cancelada pelo utilizador.');
+            else setStatus('Não foi possível guardar o ficheiro.', true);
+        }
+        return;
+    }
+    // Sem gravação de ficheiros nesta vista: copia o DXF como texto (ASCII) para colar num ficheiro .dxf.
+    DXF_ASCII = true;
+    const texto = gerarDxf(ultimo.indice);
+    DXF_ASCII = false;
+    let ok = false;
+    try { await navigator.clipboard.writeText(texto); ok = true; } catch (e) {}
+    aviso(ok ? 'DXF copiado: cole num ficheiro .dxf' : 'Não foi possível copiar');
+});
+
+</script>
+
+</body>
+</html>
