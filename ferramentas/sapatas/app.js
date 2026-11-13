@@ -7,6 +7,12 @@
   const C = window.SapataCalc;
   const $ = (s, el) => (el || document).querySelector(s);
   const esc = (s) => String(s === undefined || s === null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  // Versão atual da ferramenta (fonte: versoes.js na raiz do hub).
+  const versaoApp = () => {
+    const h = window.BO_VERSOES && window.BO_VERSOES['sapatas'];
+    return h && h.length ? 'v' + h[0].v : 'v—';
+  };
+  document.querySelectorAll('[data-versao]').forEach((el) => { el.textContent = versaoApp(); });
   const f = C.fmt;
   const parseNum = (v) => { const s = String(v).replace(/\s/g, '').replace(',', '.'); if (s === '' || s === '-' ) return NaN; const n = Number(s); return isFinite(n) ? n : NaN; };
   const showNum = (v) => (v === undefined || v === null || v === '') ? '' : String(v).replace('.', ',');
@@ -955,7 +961,7 @@
     const rOf = (c) => c && c.comb ? R.porComb.find(r => r.comb.id === c.comb.id) : null;
     const H = [];
     H.push(`<div class="report">
-      <div class="rhead"><img class="logo-img" src="logo_color.png" alt="BO Engenharia" onerror="this.outerHTML='<div class=&quot;logo&quot;>BO</div>'"><div><h1>Sapata${p.ref ? ' ' + esc(p.ref) : ''} — memória de cálculo</h1><div>Verificação geotécnica e estrutural de sapata isolada</div></div><div class="mono" style="text-align:right;font-size:11px">${esc(p.data || '')}<br>v0.1</div></div>
+      <div class="rhead"><img class="logo-img" src="logo_color.png" alt="BO Engenharia" onerror="this.outerHTML='<div class=&quot;logo&quot;>BO</div>'"><div><h1>Sapata${p.ref ? ' ' + esc(p.ref) : ''} — memória de cálculo</h1><div>Verificação geotécnica e estrutural de sapata isolada</div></div><div class="mono" style="text-align:right;font-size:11px">${esc(p.data || '')}<br>${esc(versaoApp())}</div></div>
       <div class="meta"><div><span>Projeto / Obra:</span> ${esc(p.obra)}</div><div><span>Requerente:</span> ${esc(p.cliente)}</div><div><span>Morada:</span> ${esc(p.local)}</div><div><span>Autor:</span> ${esc(p.autor)}</div><div><span>Referência:</span> ${esc(p.ref)}</div><div><span>Verificado por:</span> ${esc(p.verificador)}</div></div>
       ${p.notas ? `<p style="margin-top:8px"><i>${esc(p.notas)}</i></p>` : ''}`);
 
@@ -1101,7 +1107,7 @@ vEd = ${f(cp.val, 3)} MPa ≤ vRd = ${f(cp.lim, 3)} MPa  →  η = ${f(cp.eta, 3
       ${['phimin', 'smax', 'smin', ...g.pil.flatMap(q => ['arr-' + q.id, 'arrT-' + q.id])].map(chk).filter(Boolean).map(c => `<tr><td>${esc(c.nome)}<br><small>${esc(c.info || c.ref)}</small></td><td class="mono">${fmtVal(c.val, c.un)}</td><td class="mono">${fmtVal(c.lim, c.un)}</td><td>${okTxt(c)}</td></tr>`).join('')}</table>`);
 
     if (R.avisos.length) H.push(`<h2>9. Avisos</h2><ul>${R.avisos.map(a => `<li>${esc(a)}</li>`).join('')}</ul>`);
-    H.push(`<div class="disc">Memória gerada pela ferramenta “Sapatas” (Webapps-BO, v0.1) em ${new Date().toLocaleString('pt-PT')}. Este software é uma ferramenta auxiliar de cálculo e não substitui a validação técnica e o julgamento profissional de um engenheiro qualificado. O utilizador assume total responsabilidade pelo uso e verificação independente dos resultados.</div></div>`);
+    H.push(`<div class="disc">Memória gerada pela ferramenta “Sapatas” (Webapps-BO, ${esc(versaoApp())}) em ${new Date().toLocaleString('pt-PT')}. Este software é uma ferramenta auxiliar de cálculo e não substitui a validação técnica e o julgamento profissional de um engenheiro qualificado. O utilizador assume total responsabilidade pelo uso e verificação independente dos resultados.</div></div>`);
     return H.join('');
   }
   function svgPlantaReport(r) {

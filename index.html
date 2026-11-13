@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BOassociados | WebApps</title>
 <script src="tema.js"></script>
+<script src="versoes.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
@@ -285,6 +286,20 @@
 
   .card-link:hover{ border-bottom-color: var(--blue); color: var(--blue); }
 
+  /* Rodapé do cartão: link + versão (preenchida a partir de versoes.js) */
+  .card-rodape{
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .versao{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--text-faint);
+    white-space: nowrap;
+  }
+
   /* Placeholder / empty-slot card, for adding future tools */
   .card.placeholder{
     align-items: center;
@@ -518,6 +533,27 @@
       <span>Verificar sempre os resultados. Projeto Piloto.</span>
     </div>
   </footer>
+
+  <script>
+    // Versão e data em cada cartão, a partir de versoes.js (chave = pasta da ferramenta).
+    (function () {
+      var V = window.BO_VERSOES || {};
+      document.querySelectorAll('a.card[href^="ferramentas/"]').forEach(function (card) {
+        var pasta = card.getAttribute('href').split('/')[1];
+        var h = V[pasta], link = card.querySelector('.card-link');
+        if (!h || !h.length || !link) return;
+        var rodape = document.createElement('div');
+        rodape.className = 'card-rodape';
+        link.parentNode.insertBefore(rodape, link);
+        rodape.appendChild(link);
+        var el = document.createElement('span');
+        el.className = 'versao';
+        el.textContent = 'v' + h[0].v + ' · ' + h[0].data;
+        el.title = h.map(function (x) { return 'v' + x.v + ' (' + x.data + ') — ' + x.nota; }).join('\n');
+        rodape.appendChild(el);
+      });
+    })();
+  </script>
 
 </body>
 </html>
