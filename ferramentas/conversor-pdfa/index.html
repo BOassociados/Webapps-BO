@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Conversor PDF/A | BO Associados</title>
+<script src="../../tema.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  /* Layout: ferramenta de coluna única — opções, zona de largar, tabela de ficheiros.
+     Paleta BO: escuro por defeito; claro em :root[data-theme="light"] (ver tema.js). */
+  --bg:#12151a; --surface:#181c22; --ink:#e9e7e2; --muted:#9aa1ac; --line:#2a2f38;
+  --accent:#7EA4A2; --accent-soft:rgba(126,164,162,0.12);
+  --ok:#6fcf97; --ok-soft:rgba(111,207,151,0.12); --warn:#e3b55f; --warn-soft:rgba(227,181,95,0.12); --err:#e07a6f; --err-soft:rgba(224,122,111,0.12);
+  --f-body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-head:"Space Grotesk","Inter",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  color-scheme:dark;
+}
+/* Tema claro — paleta comum às ferramentas BO (ver tema.js) */
+:root[data-theme="light"]{
+  --bg:#eef0ee; --surface:#ffffff; --ink:#1a1f22; --muted:#4f585e; --line:#d4d9d6;
+  --accent:#4b7a77; --accent-soft:rgba(75,122,119,0.10);
+  --ok:#2f8a57; --ok-soft:#e1f3e9; --warn:#9a6200; --warn-soft:#fbf0d9; --err:#b42318; --err-soft:#fde7e5;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--f-body)}
+.wrap{max-width:960px;margin:0 auto;padding:72px 20px 48px;display:grid;gap:20px}
+.back-link{position:fixed;top:24px;left:24px;font-size:13.5px;color:var(--muted);text-decoration:none;z-index:10}
+.back-link:hover{color:var(--ink)}
+.tema-fixo{position:fixed;top:18px;right:24px;z-index:10}
+.eyebrow{font:11px var(--f-mono);color:var(--accent);letter-spacing:.02em;margin-bottom:8px}
+header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:12px}
+h1{font-family:var(--f-head);font-size:26px;font-weight:600;margin:0;text-wrap:balance;letter-spacing:-.01em}
+.sub{color:var(--muted);margin:4px 0 0;max-width:62ch}
+.engine{font:12px var(--f-mono);color:var(--muted);display:flex;align-items:center;gap:8px;white-space:nowrap}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--warn)}
+.dot.ready{background:var(--ok)} .dot.fail{background:var(--err)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px 32px;padding:16px 18px}
+.opt{display:grid;gap:8px;align-content:start}
+.opt .opt-label{margin-bottom:0}
+.opt-label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;margin-bottom:6px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label{padding:7px 14px;cursor:pointer;font:500 14px var(--f-mono);border-right:1px solid var(--line);user-select:none}
+.seg label:last-of-type{border-right:0}
+.seg input:checked+label{background:var(--accent);color:var(--surface)}
+.seg input:focus-visible+label{outline:2px solid var(--accent);outline-offset:-3px}
+.sw{display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:500;font-size:14px;padding:6px 0}
+.sw input{position:absolute;opacity:0;pointer-events:none}
+.sw .track{width:36px;height:20px;border-radius:999px;background:var(--line);position:relative;transition:background .15s;flex:none}
+.sw .track::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--surface);box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+.sw input:checked+.track{background:var(--accent)}
+.sw input:checked+.track::after{transform:translateX(16px)}
+.sw input:focus-visible+.track{outline:2px solid var(--accent);outline-offset:2px}
+.opt-hint{margin:0;font-size:13px;color:var(--muted);max-width:44ch}
+.drop{border:2px dashed var(--line);border-radius:10px;padding:34px 20px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s;background:var(--surface)}
+.drop:hover,.drop:focus-visible,.drop.over{border-color:var(--accent);background:var(--accent-soft);outline:none}
+.drop strong{display:block;font-family:var(--f-head);font-size:17px;font-weight:600}
+.drop span{color:var(--muted);font-size:14px}
+.drop.disabled{opacity:.55;pointer-events:none}
+.bar{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--line)}
+.summary{font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+button{font:500 14px var(--f-body);border-radius:7px;padding:7px 14px;cursor:pointer;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+button:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+button.primary:hover:not(:disabled){filter:brightness(1.1);color:var(--surface)}
+button:disabled{opacity:.45;cursor:not-allowed}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.tbl{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;padding:10px 18px;border-bottom:1px solid var(--line)}
+td{padding:11px 18px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--f-mono);font-size:13px;white-space:nowrap}
+.fname{word-break:break-all;font-weight:500}
+.fsub{font-size:12px;color:var(--muted)}
+.chip{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.chip.wait{background:var(--accent-soft);color:var(--accent)}
+.chip.ok{background:var(--ok-soft);color:var(--ok)}
+.chip.warn{background:var(--warn-soft);color:var(--warn)}
+.chip.err{background:var(--err-soft);color:var(--err)}
+.prog{height:4px;background:var(--line);border-radius:2px;margin-top:6px;overflow:hidden;width:120px}
+.prog i{display:block;height:100%;background:var(--accent);width:0;transition:width .2s}
+details{margin-top:6px}
+summary{font-size:12px;color:var(--muted);cursor:pointer}
+pre{font:12px/1.45 var(--f-mono);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 10px;max-height:180px;overflow:auto;white-space:pre-wrap;margin:6px 0 0}
+.overlay{position:fixed;inset:0;z-index:50;display:none;place-items:center;background:color-mix(in srgb,var(--accent) 14%,transparent);backdrop-filter:blur(2px)}
+.overlay.on{display:grid}
+.overlay div{border:3px dashed var(--accent);border-radius:16px;background:var(--surface);padding:36px 48px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.18)}
+.overlay strong{display:block;font-family:var(--f-head);font-size:20px;font-weight:600;color:var(--accent)}
+.overlay span{color:var(--muted);font-size:14px}
+.empty{padding:26px 18px;color:var(--muted);text-align:center;font-size:14px}
+.notes{font-size:13px;color:var(--muted);display:grid;gap:6px;padding:0 4px}
+.notes p{margin:0;max-width:90ch}
+.notes code{font-family:var(--f-mono);font-size:12px}
+.msg{padding:10px 18px;font-size:14px;border-top:1px solid var(--line)}
+.msg.err{color:var(--err)}
+@media (max-width:640px){
+  .back-link{left:16px} .tema-fixo{right:16px}
+  th:nth-child(3),td:nth-child(3){display:none}
+  td,th{padding:10px 12px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<a href="../../index.html" class="back-link">← Voltar às ferramentas</a>
+<div class="tema-fixo"><button type="button" data-tema-toggle></button></div>
+<div class="overlay" id="overlay" aria-hidden="true"><div><strong>Largue os PDF para converter</strong><span>Norma e opções atuais aplicam-se a estes ficheiros</span></div></div>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="eyebrow">Geral · PDF</div>
+      <h1>Conversor PDF/A</h1>
+      <p class="sub">Converte PDF para PDF/A de arquivo. A conversão corre neste computador: os ficheiros não são enviados para nenhum servidor.</p>
+    </div>
+    <div class="engine" id="engine"><span class="dot" id="dot"></span><span id="engineTxt">A carregar o motor… (11 MB na 1.ª vez)</span></div>
+  </header>
+
+  <section class="panel opts" aria-label="Opções">
+    <div class="opt">
+      <div class="opt-label" id="lvlLbl">Norma</div>
+      <div class="seg" role="radiogroup" aria-labelledby="lvlLbl">
+        <input type="radio" name="lvl" id="lvl1" value="1"><label for="lvl1">PDF/A-1b</label>
+        <input type="radio" name="lvl" id="lvl2" value="2" checked><label for="lvl2">PDF/A-2b</label>
+        <input type="radio" name="lvl" id="lvl3" value="3"><label for="lvl3">PDF/A-3b</label>
+      </div>
+      <p class="opt-hint" id="lvlHint"></p>
+    </div>
+    <div class="opt">
+      <div class="opt-label">Anotações</div>
+      <label class="sw"><input type="checkbox" id="flat" checked><span class="track"></span>Achatar anotações</label>
+      <p class="opt-hint" id="flatHint"></p>
+    </div>
+  </section>
+
+  <div class="drop disabled" id="drop" tabindex="0" role="button" aria-label="Escolher ficheiros PDF">
+    <strong>Largue os PDF em qualquer parte da página ou clique para escolher</strong>
+    <span>Vários ficheiros de uma vez · cores convertidas para sRGB · fontes incorporadas</span>
+    <input type="file" id="file" accept="application/pdf,.pdf" multiple hidden>
+  </div>
+
+  <section class="panel">
+    <div class="bar">
+      <div class="summary" id="summary">Nenhum ficheiro</div>
+      <div class="actions">
+        <button id="btnZip" class="primary" disabled>Descarregar todos (ZIP)</button>
+        <button id="btnClear" disabled>Limpar lista</button>
+      </div>
+    </div>
+    <div class="tbl">
+      <table>
+        <thead><tr><th>Ficheiro</th><th>Estado</th><th class="num">Original</th><th class="num">PDF/A</th><th></th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <div class="empty" id="empty">Os ficheiros convertidos aparecem aqui.</div>
+    </div>
+    <div class="msg" id="msg" hidden></div>
+  </section>
+
+  <div class="notes">
+    <p>Motor: Ghostscript 10.06 (AGPL-3.0) compilado para WebAssembly e pdf-lib (MIT), com perfil de cor sRGB IEC 61966-2.1 como OutputIntent. Um aviso de conformidade indica que o Ghostscript teve de retirar ou alterar algo do original (por exemplo, anotações não permitidas quando não são achatadas): veja os detalhes e compare com o original.</p>
+    <p>Para validação formal, abra o resultado no veraPDF (gratuito, verapdf.org). PDF protegidos por password têm de ser desbloqueados antes da conversão.</p>
+  </div>
+</div>
+
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const HINTS = {
+    '1': 'PDF/A-1b (ISO 19005-1): o mais restritivo. Transparências não são permitidas e podem alterar o aspeto, e desenhos com blocos repetidos (legendas, carimbos) ficam bastante maiores. Use só se for exigido.',
+    '2': 'PDF/A-2b (ISO 19005-2): recomendado. Aceita transparências e camadas; é o habitual em entregas a entidades públicas.',
+    '3': 'PDF/A-3b (ISO 19005-3): igual ao 2b, mas permite ficheiros anexos dentro do PDF.'
+  };
+  const lvlHint = $('lvlHint');
+  const level = () => document.querySelector('input[name=lvl]:checked').value;
+  const showHint = () => { lvlHint.textContent = HINTS[level()]; };
+  document.querySelectorAll('input[name=lvl]').forEach(r => r.addEventListener('change', showHint));
+  showHint();
+  const flatHint = $('flatHint');
+  const showFlat = () => { flatHint.textContent = $('flat').checked
+    ? 'Nuvens de revisão, carimbos, comentários e marcações passam a fazer parte do desenho, tal como aparecem no ecrã. Deixam de ser editáveis como comentários.'
+    : 'As anotações são mantidas como comentários editáveis. As que o PDF/A não permite (não imprimíveis, multimédia, sem aspeto definido) são removidas.'; };
+  $('flat').addEventListener('change', showFlat);
+  showFlat();
+
+  // ---------- worker ----------
+  let worker = null, ready = false;
+  const jobs = [];      // {id,name,size,file,status,out,log,page,total,row,level}
+  const queue = [];
+  let busy = false, seq = 0;
+
+  function startEngine() {
+    try {
+      // Motor em ficheiros separados (motor/): o browser guarda-os em cache entre visitas.
+      worker = new Worker('motor/worker.js');
+      worker.onmessage = onWorker;
+      worker.onerror = (e) => engineFail('Erro no motor: ' + (e.message || 'desconhecido'));
+      worker.postMessage({type:'init'});
+    } catch (err) { engineFail(String(err.message || err)); }
+  }
+  function engineFail(t) {
+    $('dot').className = 'dot fail';
+    $('engineTxt').textContent = 'Motor indisponível';
+    showMsg('Não foi possível iniciar o motor de conversão neste browser (' + t + '). Experimente uma versão recente do Chrome, Edge ou Firefox.', true);
+  }
+  function onWorker(e) {
+    const m = e.data;
+    if (m.type === 'ready') {
+      ready = true;
+      $('dot').className = 'dot ready';
+      $('engineTxt').textContent = 'Ghostscript 10.06 pronto';
+      $('drop').classList.remove('disabled');
+      pump();
+    } else if (m.type === 'initError') {
+      engineFail(m.error);
+    } else if (m.type === 'progress') {
+      const j = jobs.find(x => x.id === m.id); if (!j) return;
+      j.page = m.page; j.total = m.total; j.phase = m.phase || ''; render(j);
+    } else if (m.type === 'done') {
+      const j = jobs.find(x => x.id === m.id); busy = false;
+      if (j) {
+        j.log = m.log || '';
+        if (m.ok) {
+          j.out = new Blob([m.out], {type:'application/pdf'});
+          j.warn = conformanceWarnings(j.log);
+          j.status = j.warn.length ? 'warn' : 'ok';
+        } else {
+          j.status = 'err';
+          j.err = /password|encrypt/i.test(j.log) ? 'PDF protegido por password' :
+                  /memory access out of bounds|out of memory/i.test(j.log)
+                    ? (j.level === '1' ? 'Sem memória no PDF/A-1b — experimente o 2b' : 'Sem memória para este ficheiro') :
+                  /not a PDF|Couldn't find trailer|Unrecoverable error/i.test(j.log) ? 'Ficheiro danificado ou não é PDF' : 'A conversão falhou';
+        }
+        render(j);
+      }
+      updateBar();
+      pump();
+    }
+  }
+  function conformanceWarnings(log) {
+    return log.split('\n').filter(l => /PDFA|PDF\/A|transparen|not permitted|not allowed|will be|reverting|abort/i.test(l) && !/^Processing|^Page \d/.test(l)).map(s => s.trim()).filter(Boolean);
+  }
+  function pump() {
+    if (!ready || busy) return;
+    const j = queue.shift(); if (!j) return;
+    busy = true; j.status = 'run'; render(j);
+    j.file.arrayBuffer().then(buf => {
+      j.level = level(); j.flat = $('flat').checked;
+      worker.postMessage({type:'convert', id:j.id, data:buf, level:j.level, flat:j.flat}, [buf]);
+    }).catch(err => { busy = false; j.status='err'; j.err='Não foi possível ler o ficheiro'; j.log=String(err); render(j); pump(); });
+  }
+
+  // ---------- ficheiros ----------
+  function addFiles(list) {
+    const pdfs = [...list].filter(f => /\.pdf$/i.test(f.name) || f.type === 'application/pdf');
+    if (!pdfs.length) { showMsg('Só são aceites ficheiros PDF.', true); return; }
+    hideMsg();
+    for (const f of pdfs) {
+      const j = {id: ++seq, name: f.name, size: f.size, file: f, status: 'queue', page: 0, total: 0};
+      jobs.push(j); queue.push(j); render(j);
+    }
+    updateBar(); pump();
+  }
+  const drop = $('drop'), input = $('file');
+  drop.addEventListener('click', () => input.click());
+  drop.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); } });
+  input.addEventListener('change', () => { addFiles(input.files); input.value = ''; });
+  // largar em qualquer parte da página
+  const overlay = $('overlay');
+  let dragDepth = 0;
+  const hasFiles = (e) => e.dataTransfer && [...e.dataTransfer.types].includes('Files');
+  const hideOverlay = () => { dragDepth = 0; overlay.classList.remove('on'); drop.classList.remove('over'); };
+  window.addEventListener('dragenter', e => {
+    if (!hasFiles(e)) return; e.preventDefault();
+    dragDepth++; if (ready) { overlay.classList.add('on'); drop.classList.add('over'); }
+  });
+  window.addEventListener('dragover', e => {
+    if (!hasFiles(e)) return; e.preventDefault();
+    e.dataTransfer.dropEffect = ready ? 'copy' : 'none';
+  });
+  window.addEventListener('dragleave', e => {
+    if (!hasFiles(e)) return;
+    dragDepth = Math.max(0, dragDepth - 1);
+    if (dragDepth === 0 || e.clientX <= 0 || e.clientY <= 0 || e.clientX >= innerWidth || e.clientY >= innerHeight) hideOverlay();
+  });
+  window.addEventListener('drop', e => {
+    if (!hasFiles(e)) return; e.preventDefault(); hideOverlay();
+    if (ready) addFiles(e.dataTransfer.files);
+    else showMsg('O motor ainda está a carregar. Aguarde uns segundos e volte a largar os ficheiros.', true);
+  });
+
+  // ---------- render ----------
+  const fmt = (n) => n < 1024 ? n + ' B' : n < 1048576 ? (n/1024).toFixed(0) + ' KB' : (n/1048576).toFixed(1).replace('.', ',') + ' MB';
+  const outName = (n) => n.replace(/\.pdf$/i, '') + '_PDFA.pdf';
+  const esc = (s) => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  function render(j) {
+    $('empty').hidden = true;
+    if (!j.row) { j.row = document.createElement('tr'); $('rows').appendChild(j.row); }
+    let state = '';
+    if (j.status === 'queue') state = '<span class="chip wait">Em fila</span>';
+    else if (j.status === 'run') {
+      const pct = j.total ? Math.round(100 * j.page / j.total) : 3;
+      state = j.phase === 'compact'
+        ? '<span class="chip wait">A otimizar tamanho</span><div class="prog"><i style="width:100%"></i></div>'
+        : '<span class="chip wait">A converter' + (j.total ? ' · pág. ' + j.page + '/' + j.total : '') + '</span><div class="prog"><i style="width:' + pct + '%"></i></div>';
+    }
+    else if (j.status === 'ok') state = '<span class="chip ok">PDF/A-' + j.level + 'b</span>';
+    else if (j.status === 'warn') state = '<span class="chip warn">PDF/A-' + j.level + 'b · com avisos</span>';
+    else state = '<span class="chip err">' + esc(j.err || 'Erro') + '</span>';
+    const sub = j.total && (j.status === 'ok' || j.status === 'warn') ? '<div class="fsub">' + j.total + (j.total === 1 ? ' página' : ' páginas') + ' → ' + esc(outName(j.name)) + (j.flat ? ' · anotações achatadas' : '') + '</div>' : '';
+    const det = j.log && j.status !== 'run' ? '<details><summary>' + (j.warn && j.warn.length ? 'Ver avisos (' + j.warn.length + ')' : 'Ver registo') + '</summary><pre>' + esc((j.warn && j.warn.length ? j.warn.join('\n') + '\n\n— registo completo —\n' : '') + j.log) + '</pre></details>' : '';
+    j.row.innerHTML =
+      '<td><div class="fname">' + esc(j.name) + '</div>' + sub + det + '</td>' +
+      '<td>' + state + '</td>' +
+      '<td class="num">' + fmt(j.size) + '</td>' +
+      '<td class="num">' + (j.out ? fmt(j.out.size) : '—') + '</td>' +
+      '<td class="num">' + (j.out ? '<button data-id="' + j.id + '">Descarregar</button>' : '') + '</td>';
+    const b = j.row.querySelector('button');
+    if (b) b.onclick = () => save(outName(j.name), j.out);
+  }
+  function updateBar() {
+    const done = jobs.filter(j => j.out).length, err = jobs.filter(j => j.status === 'err').length;
+    const pend = jobs.filter(j => j.status === 'queue' || j.status === 'run').length;
+    const parts = [];
+    if (jobs.length) parts.push(jobs.length + (jobs.length === 1 ? ' ficheiro' : ' ficheiros'));
+    if (done) parts.push(done + ' convertido' + (done > 1 ? 's' : ''));
+    if (pend) parts.push(pend + ' por converter');
+    if (err) parts.push(err + ' com erro');
+    $('summary').textContent = parts.length ? parts.join(' · ') : 'Nenhum ficheiro';
+    $('btnZip').disabled = done < 1 || pend > 0;
+    $('btnClear').disabled = !jobs.length || pend > 0;
+  }
+  $('btnClear').onclick = () => {
+    jobs.length = 0; $('rows').innerHTML = ''; $('empty').hidden = false; hideMsg(); updateBar();
+  };
+  $('btnZip').onclick = async () => {
+    const files = jobs.filter(j => j.out);
+    if (files.length === 1) return save(outName(files[0].name), files[0].out);
+    const used = new Set();
+    const entries = [];
+    for (const j of files) {
+      let n = outName(j.name), k = 2;
+      while (used.has(n.toLowerCase())) n = outName(j.name).replace(/_PDFA\.pdf$/, '_PDFA (' + (k++) + ').pdf');
+      used.add(n.toLowerCase());
+      entries.push({name: n, data: new Uint8Array(await j.out.arrayBuffer())});
+    }
+    const d = new Date();
+    const stamp = d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0');
+    save('PDFA_' + stamp + '.zip', makeZip(entries));
+  };
+
+  // ---------- descarregar ----------
+  let dlCap; // undefined = não testado
+  async function save(name, blob) {
+    if (window.claude && typeof window.claude.use === 'function') {
+      if (dlCap === undefined) { try { dlCap = await window.claude.use('downloads'); } catch (_) { dlCap = null; } }
+      if (dlCap) {
+        try { await dlCap.save({filename: name, data: blob}); hideMsg(); }
+        catch (err) {
+          if (err && err.code === 'declined') return;
+          if (err && err.code === 'rate_limited') showMsg('Já há um pedido de descarga aberto. Confirme-o e tente de novo.', true);
+          else showMsg('Não foi possível descarregar aqui (' + (err && err.code || 'erro') + ').', true);
+        }
+        return;
+      }
+    }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 30000);
+  }
+
+  // ---------- ZIP (sem compressão; PDF já vem comprimido) ----------
+  const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+  const crc32 = (u) => { let c = 0xFFFFFFFF; for (let i = 0; i < u.length; i++) c = CRC[(c ^ u[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+  function makeZip(entries) {
+    const parts = [], central = []; let off = 0;
+    const d = new Date();
+    const dosT = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1);
+    const dosD = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
+    for (const e of entries) {
+      const nm = new TextEncoder().encode(e.name), crc = crc32(e.data), sz = e.data.length;
+      const h = new DataView(new ArrayBuffer(30));
+      h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true); h.setUint16(8, 0, true);
+      h.setUint16(10, dosT, true); h.setUint16(12, dosD, true); h.setUint32(14, crc, true); h.setUint32(18, sz, true); h.setUint32(22, sz, true);
+      h.setUint16(26, nm.length, true); h.setUint16(28, 0, true);
+      parts.push(h.buffer, nm, e.data);
+      const c = new DataView(new ArrayBuffer(46));
+      c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(8, 0x0800, true); c.setUint16(10, 0, true);
+      c.setUint16(12, dosT, true); c.setUint16(14, dosD, true); c.setUint32(16, crc, true); c.setUint32(20, sz, true); c.setUint32(24, sz, true);
+      c.setUint16(28, nm.length, true); c.setUint32(42, off, true);
+      central.push(c.buffer, nm);
+      off += 30 + nm.length + sz;
+    }
+    const csz = central.reduce((s, b) => s + (b.byteLength), 0);
+    const end = new DataView(new ArrayBuffer(22));
+    end.setUint32(0, 0x06054b50, true); end.setUint16(8, entries.length, true); end.setUint16(10, entries.length, true);
+    end.setUint32(12, csz, true); end.setUint32(16, off, true);
+    return new Blob([...parts, ...central, end.buffer], {type: 'application/zip'});
+  }
+
+  function showMsg(t, isErr) { const m = $('msg'); m.hidden = false; m.textContent = t; m.className = 'msg' + (isErr ? ' err' : ''); }
+  function hideMsg() { $('msg').hidden = true; }
+
+  updateBar();
+  setTimeout(startEngine, 30);
+})();
+</script>
+</body>
+</html>
