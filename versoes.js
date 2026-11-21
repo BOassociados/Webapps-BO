@@ -40,6 +40,7 @@ window.BO_VERSOES = {
   ],
 
   'conversor-pdfa': [
+    { v: '1.1', data: '2026-11-21', nota: 'Interruptor de tema com as cores certas no tema claro' },
     { v: '1.0', data: '2026-11-21', nota: 'Versão inicial' }
   ],
 
