@@ -39,6 +39,10 @@ window.BO_VERSOES = {
     { v: '1.0', data: '2026-11-13', nota: 'Versão inicial' }
   ],
 
+  'conversor-pdfa': [
+    { v: '1.0', data: '2026-11-21', nota: 'Versão inicial' }
+  ],
+
   'sapatas': [
     { v: '2.0', data: '2026-11-02', nota: 'Cálculo revisto: drenado / não drenado por camada, espaçamentos e amarrações pelo EC2; campos do Projeto e rodapé' },
     { v: '1.1', data: '2026-10-31', nota: 'Tema claro / escuro partilhado com o hub' },
